@@ -1,0 +1,11 @@
+## Interface: 90200
+## Title: CalReminder
+## Version: 1.1.3
+## Author: Xam
+## SavedVariables: maxDaysToCheck, CalReminderOptionsData
+
+Libs\Ace3\LibStub\LibStub.lua
+Libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
+Libs\EZBlizzardUiPopups\EZBlizzardUiPopups.xml
+
+embeds.xml

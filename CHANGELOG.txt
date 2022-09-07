@@ -1,0 +1,7 @@
+﻿- v1.1.3
+	- TOC for 9.2.
+- v1.1.2
+	- TOC for 9.1.5.
+- v1.1.1
+	- Added: New Talking Heads for 9.1.
+	- Added: You can now choose the NPC who will remind you impending events.
