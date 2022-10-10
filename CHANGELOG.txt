@@ -1,6 +1,6 @@
 ﻿- v1.1.4
 	- TOC for 9.2.7.
-	- Packager modifications.
+	- Packager modifications (libraries externalization).
 - v1.1.3
 	- TOC for 9.2.
 - v1.1.2
