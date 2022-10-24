@@ -6,7 +6,7 @@ function CalReminderFrame_OnLoad(self, ...)
 end
 
 function CalReminderFrame_OnMouseUp(self, ...)
-	TalkingHeadFrame_FadeoutFrames()
+	TalkingHeadFrame:FadeoutFrames()
 end
 
 function CalReminderFrameShowCalendarButton_OnClick(self, ...)

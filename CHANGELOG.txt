@@ -1,4 +1,6 @@
-﻿- v1.1.5
+﻿- v1.1.6
+	- Fixed a method call for TalkingHeadFrame.
+- v1.1.5
 	- TOC for 10.0.0.
 - v1.1.4
 	- TOC for 9.2.7.
