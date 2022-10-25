@@ -71,7 +71,8 @@ function CalReminder:ReloadData()
 									and curMinute >= firstEvent.startTime.minute then 
 							--too late
 						else
-							if firstEvent.inviteStatus == 1 or firstEvent.inviteStatus == 9 then
+							if firstEvent.inviteStatus == Enum.CalendarStatus.Invited
+									or firstEvent.inviteStatus == Enum.CalendarStatus.Tentative then
 								--need response
 								if dayLoopId == day then
 									firstEventIsToday = true
