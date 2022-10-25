@@ -1,6 +1,6 @@
 ## Interface: 100000
 ## Title: CalReminder
-## Version: 1.1.6
+## Version: 1.1.7
 ## Author: Xam_insight
 ## SavedVariables: maxDaysToCheck, CalReminderOptionsData
 ## Dependencies: EZBlizzardUiPopups

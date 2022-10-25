@@ -102,11 +102,13 @@ function CalReminder:ReloadData()
 		if englishFaction == "Alliance" then
 			chief = CalReminderOptionsData["ALLIANCE_NPC"] or "SHANDRIS"
 		end
+		local frame = nil
 		if firstEventIsToday then
-			local frame = EZBlizzUiPop_npcDialog(chief, string.format(L["CALREMINDER_DDAY_REMINDER"], UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
+			frame = EZBlizzUiPop_npcDialog(chief, string.format(L["CALREMINDER_DDAY_REMINDER"], UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
 		elseif firstEventIsTomorrow then
-			local frame = EZBlizzUiPop_npcDialog(chief, string.format(L["CALREMINDER_LDAY_REMINDER"], UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
-		else
+			frame = EZBlizzUiPop_npcDialog(chief, string.format(L["CALREMINDER_LDAY_REMINDER"], UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
+		end
+		if not frame then
 			EZBlizzUiPop_ToastFakeAchievementNew(CalReminder, firstEvent.title, 9680, true, 20, L["CALREMINDER_ACHIV_REMINDER"], function()  CalReminderShowCalendar(firstEventMonthOffset, firstEventDay, firstEventId)  end)
 		end
 	end
