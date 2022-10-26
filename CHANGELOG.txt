@@ -1,4 +1,6 @@
-﻿- v1.1.8
+﻿- v1.1.9
+	- [EZBlizzardUiPopups] Handeled a problem with the TalkinHeadFrame button.
+- v1.1.8
 	- Fixed a bug with Calendar invitation Status. The values changed at some point in the game.
 - v1.1.7
 	- Handeled a problem with the TalkinHeadFrame button.
