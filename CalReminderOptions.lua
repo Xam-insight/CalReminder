@@ -22,6 +22,13 @@ function loadCalReminderOptions()
 		["LICH_KING"            ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["LICH_KING"            ]["CreatureId"]),
 		["SHANDRIS"             ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["SHANDRIS"             ]["CreatureId"]),
 		["SHAW"                 ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["SHAW"                 ]["CreatureId"]),
+		["VALEERA"              ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["VALEERA"              ]["CreatureId"]),
+		["JAINA"                ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["JAINA"                ]["CreatureId"]),
+		["KANRETHAD"            ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["KANRETHAD"            ]["CreatureId"]),
+		["BOLVAR"               ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["BOLVAR"               ]["CreatureId"]),
+		["TURALYON"             ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["TURALYON"             ]["CreatureId"]),
+		["ALLERIA"              ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["ALLERIA"              ]["CreatureId"]),
+		["AZURATHEL"            ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["AZURATHEL"            ]["CreatureId"]),
 	}
 
 	local hordeNpcValues = {
@@ -35,6 +42,15 @@ function loadCalReminderOptions()
 		["THRALL"               ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["THRALL"               ]["CreatureId"]),
 		["GALLYWIX"             ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["GALLYWIX"             ]["CreatureId"]),
 		["GAMON"                ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["GAMON"                ]["CreatureId"]),
+		["REXXAR"               ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["REXXAR"               ]["CreatureId"]),
+		["VALEERA"              ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["VALEERA"              ]["CreatureId"]),
+		["HAMUUL"               ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["HAMUUL"               ]["CreatureId"]),
+		["SAURFANG"             ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["SAURFANG"             ]["CreatureId"]),
+		["GARROSH"              ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["GARROSH"              ]["CreatureId"]),
+		["LIADRIN"              ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["LIADRIN"              ]["CreatureId"]),
+		["FAOL"                 ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["FAOL"                 ]["CreatureId"]),
+		["KAELTHAS"             ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["KAELTHAS"             ]["CreatureId"]),
+		["CINDRETHRESH"         ] = EZBlizzUiPop_GetNameFromNpcID(EZBlizzUiPop_npcModels["CINDRETHRESH"         ]["CreatureId"]),
 	}
 
 	local CalReminderOptions = {
