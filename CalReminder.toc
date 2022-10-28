@@ -4,8 +4,8 @@
 ## Author: Xam_insight
 ## SavedVariables: maxDaysToCheck, CalReminderOptionsData
 
-..\EZBlizzardUiPopups\Libs\Ace3\LibStub\LibStub.lua
-..\EZBlizzardUiPopups\Libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
-..\EZBlizzardUiPopups\EZBlizzardUiPopups.lua
+Libs\Ace3\LibStub\LibStub.lua
+Libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
+Libs\EZBlizzardUiPopups\EZBlizzardUiPopups.lua
 
 embeds.xml
