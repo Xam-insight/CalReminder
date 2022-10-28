@@ -1,4 +1,6 @@
-﻿- v1.1.10
+﻿- v1.1.11
+	- Library import revert to default handling.
+- v1.1.10
 	- [EZBlizzardUiPopups] New models and library import rationalization.
 - v1.1.9
 	- [EZBlizzardUiPopups] Handeled a problem with the TalkinHeadFrame button.
