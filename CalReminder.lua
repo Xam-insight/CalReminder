@@ -110,7 +110,7 @@ function CalReminder:ReloadData()
 			frame = EZBlizzUiPop_npcDialog(chief, string.format(L["CALREMINDER_LDAY_REMINDER"], UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
 		end
 		if not frame then
-			EZBlizzUiPop_ToastFakeAchievementNew(CalReminder, firstEvent.title, 9680, true, 20, L["CALREMINDER_ACHIV_REMINDER"], function()  CalReminderShowCalendar(firstEventMonthOffset, firstEventDay, firstEventId)  end)
+			EZBlizzUiPop_ToastFakeAchievementNew(CalReminder, firstEvent.title, 9680, true, 10, L["CALREMINDER_ACHIV_REMINDER"], function()  CalReminderShowCalendar(firstEventMonthOffset, firstEventDay, firstEventId)  end)
 		end
 	end
 end
