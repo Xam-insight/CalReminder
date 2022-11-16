@@ -1,4 +1,6 @@
-﻿- v1.1.12
+﻿- v1.1.13
+	- TOC for 10.0.2.
+- v1.1.12
 	- The showing time of the Achievement type reminder is reduced to 10 seconds.
 - v1.1.11
 	- Library import revert to default handling.
