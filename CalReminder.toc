@@ -1,6 +1,6 @@
-## Interface: 100002
+## Interface: 100005
 ## Title: CalReminder
-## Version: 1.1.13
+## Version: 1.1.14
 ## Author: Xam_insight
 ## SavedVariables: maxDaysToCheck, CalReminderOptionsData
 
