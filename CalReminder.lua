@@ -64,7 +64,7 @@ function CalReminder:ReloadData()
 				firstEvent = C_Calendar.GetDayEvent(monthOffsetLoopId, dayLoopId, loopId)
 				if firstEvent then
 					CalReminder:UnregisterEvent("CALENDAR_ACTION_PENDING")
-					if firstEvent.calendarType == "PLAYER" then
+					if firstEvent.calendarType == "PLAYER" or firstEvent.calendarType == "GUILD_EVENT" then
 						if monthOffsetLoopId == monthOffset
 							and dayLoopId == day
 								and curHour >= firstEvent.startTime.hour
