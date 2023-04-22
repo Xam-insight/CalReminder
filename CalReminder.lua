@@ -39,6 +39,10 @@ function CalReminder:OnEnable()
 end
 
 function CalReminder:CalReminderChatCommand()
+	CalReminder_OpenOptions()
+end
+
+function CalReminder_OpenOptions()
 	ACD:Open("CalReminder")
 end
 

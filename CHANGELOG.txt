@@ -1,4 +1,6 @@
-﻿- v1.2
+﻿- v1.2.1
+	- TOC for 10.1.0.
+- v1.2
 	- TOC for 10.0.7.
 	- Guild events are now well tracked.
 - v1.1.14
