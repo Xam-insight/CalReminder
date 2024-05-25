@@ -1,7 +1,7 @@
 ﻿- v1.2.4
 	- TOC for 10.2.7.
-	- Added: Enable Sound option.
 	- Added: Sound on Talking Heads.
+	- Added: Enable Sound option.
 - v1.2.3
 	- TOC for 10.2.5.
 - v1.2.2
