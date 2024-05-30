@@ -140,4 +140,3 @@ function CalReminderShowCalendar(monthOffset, day, id)
 		--EZBlizzUiPop_OverlayFrame:RegisterEvent("CALENDAR_OPEN_EVENT")
 	end
 end
-
