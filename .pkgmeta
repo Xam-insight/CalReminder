@@ -12,6 +12,10 @@ externals:
 	Libs/LibDataBroker-1.1: https://repos.wowace.com/wow/libdatabroker-1-1
 	Libs/EZBlizzardUiPopups: https://github.com/Xam-insight/EZBlizzardUiPopups
 
+ignore:
+	- Libs/EZBlizzardUiPopups/EZBlizzardUiPopups.toc
+	- Libs/EZBlizzardUiPopups/CHANGELOG.txt
+
 manual-changelog:
 	filename: CHANGELOG.txt
 	markup-type: markdown
