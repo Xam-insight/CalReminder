@@ -1,4 +1,7 @@
-﻿- v1.2.8
+﻿- v1.2.9
+	- Added: Saving tentative status reason.
+	- Fixes to calendar options and event display.
+- v1.2.8
 	- TOC for 11.0.2.
 	- Fixed: Deprecated calls.
 - v1.2.7
