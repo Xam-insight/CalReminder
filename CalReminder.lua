@@ -30,9 +30,8 @@ function CalReminder:OnEnable()
 	C_Calendar.OpenCalendar()
 
 	self:RegisterEvent("PLAYER_STARTED_MOVING", "ReloadData") -- Not SPELLS_CHANGED we want to be sure the player is not afk.
+	--self:RegisterEvent("CALENDAR_OPEN_EVENT", "CreateMassProcessButton")
     --self:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
-
-	loadCalReminderOptions()
 
 	self:RegisterChatCommand("crm", "CalReminderChatCommand")
 	self:Print(L["CALREMINDER_WELCOME"])
@@ -43,7 +42,83 @@ function CalReminder:CalReminderChatCommand()
 end
 
 function CalReminder_OpenOptions()
+	if not CalReminderOptionsLoaded then
+		loadCalReminderOptions()
+	end
 	ACD:Open("CalReminder")
+end
+
+function CalReminder_addRealm(aName, aRealm)
+	if aName and not string.match(aName, "-") then
+		if aRealm and aRealm ~= "" then
+			aName = aName.."-"..aRealm
+		else
+			local realm = GetNormalizedRealmName() or UNKNOWN
+			aName = aName.."-"..realm
+		end
+	end
+	return aName
+end
+
+local function GetEventInvites()
+    -- Lists for filtered invites by status
+    local invitedList = {}
+    local tentativeList = {}
+
+    -- Total number of invites for the current event
+    local numInvites = C_Calendar.GetNumInvites()
+
+    -- Check if there are any invites
+    if numInvites > 0 then
+        for i = 1, numInvites do
+            -- Retrieve the invite details
+            local inviteInfo = C_Calendar.EventGetInvite(i)
+            
+            if inviteInfo then
+                local inviteStatus = inviteInfo.inviteStatus
+
+                -- Check if the status is "Invited" or "Tentative" and add to respective list
+                if inviteStatus == Enum.CalendarStatus.Invited then
+                    table.insert(invitedList, inviteInfo)
+                elseif inviteStatus == Enum.CalendarStatus.Tentative then
+                    table.insert(tentativeList, inviteInfo)
+                end
+            end
+        end
+    else
+        print("No invites for this event.")
+    end
+
+    return invitedList, tentativeList
+end
+
+function CalReminder:CreateMassProcessButton()
+	CalReminder:UnregisterEvent("CALENDAR_OPEN_EVENT")
+	
+	local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
+    myButton:SetSize(120, 22)  -- Taille du bouton
+    myButton:SetText(BATTLEGROUND_HOLIDAY)  -- Texte du bouton
+    myButton:SetPoint("TOPLEFT", CalendarCreateEventDescriptionContainer.ScrollingEditBox, "BOTTOMLEFT", -3, -4)  -- Position du bouton
+
+    -- Fonctionnalité du bouton (ce que fait ton bouton quand on clique dessus)
+    myButton:SetScript("OnClick", function(self)
+        -- Example usage: retrieve the two lists for Invited and Tentative statuses
+		local invitedList, tentativeList = GetEventInvites()
+
+		-- Display the results for Invited
+		print(CALENDAR_STATUS_INVITED..":")
+		for _, invite in ipairs(invitedList) do
+			print(string.format("Invite: %s (%s) - Status: %d", CalReminder_addRealm(invite.name), invite.className, invite.inviteStatus))
+			SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
+		end
+
+		-- Display the results for Tentative
+		print(CALENDAR_STATUS_TENTATIVE..":")
+		for _, invite in ipairs(tentativeList) do
+			print(string.format("Invite: %s (%s) - Status: %d", CalReminder_addRealm(invite.name), invite.className, invite.inviteStatus))
+			SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
+		end
+    end)
 end
 
 function CalReminder:ReloadData()
@@ -134,11 +209,26 @@ function CalReminderShowCalendar(monthOffset, day, id)
 		Calendar_Toggle()
 		ShowUIPanel(CalendarFrame)
 	end
-	--CalendarFrame_Update()
-	--ShowUIPanel(CalendarFrame)
+
 	if monthOffset and day and id then
-		C_Calendar.OpenEvent(monthOffset, day, id)
-		--EZBlizzUiPop_OverlayFrame:RegisterEvent("CALENDAR_OPEN_EVENT")
+		C_Calendar.SetMonth(monthOffset)
+		
+		local dayOffset = 0
+
+		for button = 1, 7 do
+			local dayButton = _G["CalendarDayButton"..button]
+			if dayButton and dayButton.monthOffset == 0 then
+				dayOffset = button - 1
+				break
+			end
+		end
+		
+		CalendarDayButton_Click(_G["CalendarDayButton"..day + dayOffset])
+		if _G["CalendarDayButton"..day + dayOffset.."EventButton"..id] then
+			CalendarDayEventButton_Click(_G["CalendarDayButton"..day + dayOffset.."EventButton"..id], true)
+		else
+			print(monthOffset, day, id)
+			C_Calendar.OpenEvent(0, day, id)
+		end
 	end
 end
-
