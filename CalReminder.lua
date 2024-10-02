@@ -181,13 +181,14 @@ local function ShowReasonPopup(eventID, player)
         OnAccept = function(self)
 			-- Get the reason from the text box
 			local reasonText = self.editBox:GetText()
-			local reason = getCalReminderData(player, "reason", eventID)
-			reason = tonumber(reason)
-			reason = reason and reasonsDropdownOptions[reason]
+			local reasonID = getCalReminderData(player, "reason", eventID)
+			reasonID = tonumber(reasonID)
+			local reason = reasonID and reasonsDropdownOptions[reasonID]
 			if reasonText == reason then
 				reasonText = nil
 			end
 			setCalReminderData(player, "reasonText", reasonText, eventID)
+			setCalReminderData("lastReasonText", reasonID, reasonText, "CalReminder_defaultValues")
         end,
         EditBoxOnTextChanged = function(self)
             -- Enable or disable the "Submit" button based on text input
@@ -214,11 +215,12 @@ local function ShowReasonPopup(eventID, player)
 				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
 				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 			end
-			local reason = getCalReminderData(player, "reason", eventID)
-			reason = tonumber(reason)
-			reason = reason and reasonsDropdownOptions[reason]
+			local reasonID = getCalReminderData(player, "reason", eventID)
+			reasonID = tonumber(reasonID)
+			local reason = reasonID and reasonsDropdownOptions[reasonID]
 			local reasonText = getCalReminderData(player, "reasonText", eventID)
-			self.editBox:SetText(reasonText or reason or "")
+			local lastReasonText = getCalReminderData("lastReasonText", reasonID, "CalReminder_defaultValues")
+			self.editBox:SetText(reasonText or lastReasonText or reason or "")
 			self.editBox:SetFocus()
 			self.editBox:HighlightText()
         end,
@@ -278,7 +280,8 @@ function CalReminder:CreateCalReminderButtons()
 						GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
 						GameTooltip:AddLine(LFG_LIST_DETAILS)
 					end
-					GameTooltip:AddDoubleLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
+					GameTooltip:AddLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
+					GameTooltip:AddLine(reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
 					GameTooltip:Show()
 				end
 			end
