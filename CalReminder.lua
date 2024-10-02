@@ -30,7 +30,7 @@ function CalReminder:OnEnable()
 	C_Calendar.OpenCalendar()
 
 	self:RegisterEvent("PLAYER_STARTED_MOVING", "ReloadData") -- Not SPELLS_CHANGED we want to be sure the player is not afk.
-	self:RegisterEvent("CALENDAR_OPEN_EVENT", "CreateMassProcessButton")
+	self:RegisterEvent("CALENDAR_OPEN_EVENT", "CreateCalReminderButtons")
     --self:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
 
 	self:RegisterChatCommand("crm", "CalReminderChatCommand")
@@ -65,6 +65,51 @@ function CalReminder_addRealm(aName, aRealm)
 	return aName
 end
 
+-- Function to retrieve the current event's unique ID
+local function CalReminder_getCurrentEventId()
+	local currentEventInfo = C_Calendar.GetEventIndex()
+	local eventInfo = currentEventInfo and C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
+	return eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
+end
+
+local function getCalReminderData(player, data, eventID)
+	if not data then
+		return nil
+	end
+	if not eventID then
+		eventID = CalReminder_getCurrentEventId()
+		if not eventID then
+			return nil
+		end
+	end
+	return CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player][data]
+end
+
+local function setCalReminderData(player, data, value, eventID)
+	if not data then
+		return
+	end
+	if not eventID then
+		eventID = CalReminder_getCurrentEventId()
+		if not eventID then
+			return
+		end
+	end
+	if not player then
+		player = CalReminder_playerCharacter()
+	end
+	if not CalReminderData then
+		CalReminderData = {}
+	end
+	if not CalReminderData[eventID] then
+		CalReminderData[eventID] = {}
+	end
+	if not CalReminderData[eventID][player] then
+		CalReminderData[eventID][player] = {}
+	end
+	CalReminderData[eventID][player][data] = value
+end
+
 local function GetEventInvites()
     -- Lists for filtered invites by status
     local invitedList = {}
@@ -90,8 +135,6 @@ local function GetEventInvites()
                 end
             end
         end
-    else
-        print("No invites for this event.")
     end
 
     return invitedList, tentativeList
@@ -99,13 +142,13 @@ end
 
 -- Create a table of options with predefined text for the dropdown menu
 local dropdownOptions = {
-    { text = "Reason 1", value = "Reason 1", predefinedText = "Predefined text for Reason 1" },
-    { text = "Reason 2", value = "Reason 2", predefinedText = "Predefined text for Reason 2" },
-    { text = "Reason 3", value = "Reason 3", predefinedText = "Predefined text for Reason 3" },
+    { text = "Reason 1", value = "Reason1", predefinedText = "Predefined text for Reason 1" },
+    { text = "Reason 2", value = "Reason2", predefinedText = "Predefined text for Reason 2" },
+    { text = "Reason 3", value = "Reason3", predefinedText = "Predefined text for Reason 3" },
 }
 
 -- Function to create and show the popup with dropdown and text input
-local function ShowReasonPopup(player)
+local function ShowReasonPopup(eventID, player)
     -- Create the popup dialog
     StaticPopupDialogs["TENTATIVE_REASON"] = {
         text = "Please select a reason and provide additional details:",
@@ -115,30 +158,9 @@ local function ShowReasonPopup(player)
         whileDead = true, -- Allow popup even when the player is dead
         hideOnEscape = true, -- Hide when escape is pressed
         OnAccept = function(self)
-            -- Get the reason from the text box and dropdown menu
-            local reasonText = self.editBox:GetText()
-            local dropdownValue = UIDropDownMenu_GetSelectedValue(self.dropdown)
-            print("Selected Reason: " .. dropdownValue)
-            print("Additional Reason: " .. reasonText)
-			
-			if not CalReminderData then
-				CalReminderData = {}
-			end
-			local currentEventInfo = C_Calendar.GetEventIndex()
-			if currentEventInfo then
-				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
-				local eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
-				if eventID then
-					if not CalReminderData[eventID] then
-						CalReminderData[eventID] = {}
-					end
-					CalReminderData[eventID][player] = {}
-					CalReminderData[eventID][player].reason = dropdownValue
-					CalReminderData[eventID][player].reasonText = reasonText
-				end
-			end
-
-            -- Additional processing with the selected dropdown value and text input
+			-- Get the reason from the text box
+			local reasonText = self.editBox:GetText()
+			setCalReminderData(player, "reasonText", reasonText, eventID)
         end,
         EditBoxOnTextChanged = function(self)
             -- Enable or disable the "Submit" button based on text input
@@ -156,55 +178,16 @@ local function ShowReasonPopup(player)
             self.button1:Disable()
 
             -- Resize the editBox to make it larger
-			self.editBox:SetPoint("BOTTOM", self, "BOTTOM", 0, 30)
             self.editBox:SetWidth(200)  -- Adjust width of the editBox
-            self.editBox:SetHeight(60)  -- Adjust height of the editBox (multi-line appearance)
 
-            -- Create a dropdown menu and place it above the edit box
-            if not self.dropdown then
-                self.dropdown = CreateFrame("Frame", "TentativeReasonDropdown", self, "UIDropDownMenuTemplate")
-                self.dropdown:SetPoint("CENTER", self.editBox, "TOP", 0, 0) -- Position it further above the larger editBox
-                UIDropDownMenu_SetWidth(self.dropdown, 200) -- Set dropdown width
-                
-                -- Reference to the popup for editBox access
-                local popup = self
-                
-                -- Initialize the dropdown
-                UIDropDownMenu_Initialize(self.dropdown, function(frame, level, menuList)
-                    for _, option in ipairs(dropdownOptions) do
-                        local info = UIDropDownMenu_CreateInfo()
-                        info.text = option.text
-                        info.value = option.value
-                        info.func = function(self)
-                            -- Set the selected value in the dropdown
-                            UIDropDownMenu_SetSelectedValue(frame, self.value)
-                            
-                            -- Automatically fill the editBox with predefined text
-                            for _, opt in ipairs(dropdownOptions) do
-                                if opt.value == self.value then
-                                    -- Directly reference the popup's editBox here
-                                    popup.editBox:SetText(opt.predefinedText)
-									popup.editBox:SetFocus()
-									popup.editBox:HighlightText()
-                                    break
-                                end
-                            end
-                        end
-                        UIDropDownMenu_AddButton(info)
-                    end
-                end)
-            end
 			-- Set default selected value and fill editBox with default text
-			local defaultOption = dropdownOptions[1]
 			local currentEventInfo = C_Calendar.GetEventIndex()
 			local eventID
 			if currentEventInfo then
 				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
 				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 			end
-			self.dropdown:Show()
-			UIDropDownMenu_SetSelectedValue(self.dropdown, (eventID and CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player].reason) or defaultOption.value)
-			self.editBox:SetText((eventID and CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player].reasonText) or defaultOption.predefinedText)
+			self.editBox:SetText(getCalReminderData(player, "reasonText", eventID) or "")
 			self.editBox:SetFocus()
 			self.editBox:HighlightText()
         end,
@@ -214,24 +197,56 @@ local function ShowReasonPopup(player)
     StaticPopup_Show("TENTATIVE_REASON")
 end
 
-function CalReminder:CreateMassProcessButton()
+-- Function to show the dropdown when the button is clicked
+local function ShowTentativeDropdown(player)
+    -- Create the dropdown frame
+    local dropdown = CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate")
+    -- Initialize the dropdown
+    UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
+        for _, option in ipairs(dropdownOptions) do
+            local info = UIDropDownMenu_CreateInfo()
+			info.notCheckable = 1
+            info.text = option.text
+            info.value = option.value
+            info.func = function()
+				CalendarViewEventTentativeButton_OnClick(self)
+				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
+				if eventID then
+					local targetPlayer = player or CalReminder_playerCharacter()
+					setCalReminderData(targetPlayer, "reason", option.value, eventID)
+					ShowReasonPopup(eventID, targetPlayer)
+				end
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end, "MENU")
+    
+    -- Show the dropdown near the button
+    ToggleDropDownMenu(1, nil, dropdown, "CalendarViewEventTentativeButton", 0, 0)
+end
+
+function CalReminder:CreateCalReminderButtons()
 	CalReminder:UnregisterEvent("CALENDAR_OPEN_EVENT")
 	
-	-- Hook the function that updates calendar invite status
-	hooksecurefunc("StaticPopup_Show", function(popup)
-		-- Check if the popup is different from TENTATIVE_REASON
-		if popup ~= "TENTATIVE_REASON" and TentativeReasonDropdown then
-			if not StaticPopup_Visible("TENTATIVE_REASON") then
-				-- Hide the TentativeReason Dropdown
-				TentativeReasonDropdown:Hide()
+	-- Hook the function that shows tootip on invite list buttons
+	hooksecurefunc("CalendarEventInviteListButton_OnEnter", function(self)
+		if ( self.inviteIndex ) then
+			local inviteInfo = C_Calendar.EventGetInvite(self.inviteIndex)
+			if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
+				local currentEventId = CalReminder_getCurrentEventId()
+				local reason = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reason", currentEventId)
+				local reasonText = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reasonText", currentEventId)
+				if reason or reasonText then
+					local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex);
+					if not responseTime or responseTime.weekday == 0 then
+						GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
+						GameTooltip:AddLine(LFG_LIST_DETAILS)
+					end
+					GameTooltip:AddDoubleLine("Reason: "..(reason or ""), reasonText or "", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+					GameTooltip:Show()
+				end
 			end
 		end
-	end)
-	
-	-- Hook the function that updates calendar invite status
-	hooksecurefunc(C_Calendar, "EventTentative", function()
-		-- Show the popup to ask for the reason
-		ShowReasonPopup(CalReminder_playerCharacter())
 	end)
 	
 	-- Hook the function that updates calendar invite status
@@ -241,9 +256,35 @@ function CalReminder:CreateMassProcessButton()
 			-- Show the popup to ask for the reason
 			local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
 			if inviteInfo then
-				ShowReasonPopup(CalReminder_addRealm(inviteInfo.name))
+				ShowReasonPopup(CalReminder_getCurrentEventId(), CalReminder_addRealm(inviteInfo.name))
 			end
 		end
+	end)
+	
+	Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription, contextData)
+		-- Append a new section to the end of the menu.
+		local inviteIndex = ownerRegion and ownerRegion.inviteIndex
+		local inviteInfo = C_Calendar.EventGetInvite(inviteIndex);
+		if not inviteInfo or inviteInfo.modStatus ~= "CREATOR" then
+			rootDescription:QueueDivider()
+		end
+		rootDescription:CreateTitle("CalReminder")
+		local submenu = rootDescription:CreateButton("Tentative reason");
+		for _, option in ipairs(dropdownOptions) do
+			submenu:CreateButton(option.text, function()
+				C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
+				local targetPlayer = CalReminder_addRealm(inviteInfo.name)
+				if inviteInfo then
+					setCalReminderData(targetPlayer, "reason", option.value, inviteInfo.eventID)
+					ShowReasonPopup(inviteInfo.eventID, targetPlayer)
+				end
+			end);
+		end
+	end)
+
+	-- Hook into the button's OnClick event
+	CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
+		ShowTentativeDropdown()  -- Show the dropdown when the button is clicked
 	end)
 	
 	local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
@@ -360,7 +401,7 @@ function CalReminderShowCalendar(monthOffset, day, id)
 		Calendar_Toggle()
 		ShowUIPanel(CalendarFrame)
 	end
-
+	
 	if monthOffset and day and id then
 		C_Calendar.SetMonth(monthOffset)
 		
