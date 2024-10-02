@@ -82,10 +82,25 @@ local function getCalReminderData(player, data, eventID)
 			return nil
 		end
 	end
-	return CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player][data]
+	local value = CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player][data]
+	if value ~= nil then
+		value, dataTime = strsplit("|", tostring(value), 2)
+		if dataTime and dataTime == "" then
+			dataTime = nil
+		end
+		if value == "nil" then
+			value = nil
+		end
+	end
+	return value, dataTime
 end
 
-local function setCalReminderData(player, data, value, eventID)
+local function CalReminder_getTimeUTCinMS()
+	return tostring(time(date("!*t")))
+end
+
+local function setCalReminderData(player, data, aValue, eventID)
+	local value, dataTime = strsplit("|", tostring(aValue), 2)
 	if not data then
 		return
 	end
@@ -107,7 +122,10 @@ local function setCalReminderData(player, data, value, eventID)
 	if not CalReminderData[eventID][player] then
 		CalReminderData[eventID][player] = {}
 	end
-	CalReminderData[eventID][player][data] = value
+	if not dataTime or dataTime == "" then
+		dataTime = tostring(CalReminder_getTimeUTCinMS())
+	end
+	CalReminderData[eventID][player][data] = value.."|"..dataTime
 end
 
 local function GetEventInvites()
@@ -141,10 +159,13 @@ local function GetEventInvites()
 end
 
 -- Create a table of options with predefined text for the dropdown menu
-local dropdownOptions = {
-    { text = "Reason 1", value = "Reason1", predefinedText = "Predefined text for Reason 1" },
-    { text = "Reason 2", value = "Reason2", predefinedText = "Predefined text for Reason 2" },
-    { text = "Reason 3", value = "Reason3", predefinedText = "Predefined text for Reason 3" },
+local reasonsDropdownOptions = {
+    L["CALREMINDER_TENTATIVE_REASON1"],
+    L["CALREMINDER_TENTATIVE_REASON2"],
+    L["CALREMINDER_TENTATIVE_REASON3"],
+    L["CALREMINDER_TENTATIVE_REASON4"],
+    L["CALREMINDER_TENTATIVE_REASON5"],
+    L["CALREMINDER_TENTATIVE_REASON6"]
 }
 
 -- Function to create and show the popup with dropdown and text input
@@ -160,6 +181,12 @@ local function ShowReasonPopup(eventID, player)
         OnAccept = function(self)
 			-- Get the reason from the text box
 			local reasonText = self.editBox:GetText()
+			local reason = getCalReminderData(player, "reason", eventID)
+			reason = tonumber(reason)
+			reason = reason and reasonsDropdownOptions[reason]
+			if reasonText == reason then
+				reasonText = nil
+			end
 			setCalReminderData(player, "reasonText", reasonText, eventID)
         end,
         EditBoxOnTextChanged = function(self)
@@ -187,7 +214,11 @@ local function ShowReasonPopup(eventID, player)
 				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
 				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 			end
-			self.editBox:SetText(getCalReminderData(player, "reasonText", eventID) or "")
+			local reason = getCalReminderData(player, "reason", eventID)
+			reason = tonumber(reason)
+			reason = reason and reasonsDropdownOptions[reason]
+			local reasonText = getCalReminderData(player, "reasonText", eventID)
+			self.editBox:SetText(reasonText or reason or "")
 			self.editBox:SetFocus()
 			self.editBox:HighlightText()
         end,
@@ -203,17 +234,17 @@ local function ShowTentativeDropdown(player)
     local dropdown = CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate")
     -- Initialize the dropdown
     UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
-        for _, option in ipairs(dropdownOptions) do
+        for optionValue, optionText in ipairs(reasonsDropdownOptions) do
             local info = UIDropDownMenu_CreateInfo()
 			info.notCheckable = 1
-            info.text = option.text
-            info.value = option.value
+            info.text = optionText
+            info.value = optionValue
             info.func = function()
 				CalendarViewEventTentativeButton_OnClick(self)
 				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
 				if eventID then
 					local targetPlayer = player or CalReminder_playerCharacter()
-					setCalReminderData(targetPlayer, "reason", option.value, eventID)
+					setCalReminderData(targetPlayer, "reason", optionValue, eventID)
 					ShowReasonPopup(eventID, targetPlayer)
 				end
             end
@@ -235,14 +266,19 @@ function CalReminder:CreateCalReminderButtons()
 			if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
 				local currentEventId = CalReminder_getCurrentEventId()
 				local reason = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reason", currentEventId)
+				reason = tonumber(reason)
+				reason = (reason and reasonsDropdownOptions[reason]) or ""
 				local reasonText = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reasonText", currentEventId)
+				if reasonText == reason then
+					reasonText = ""
+				end
 				if reason or reasonText then
-					local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex);
+					local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex)
 					if not responseTime or responseTime.weekday == 0 then
 						GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
 						GameTooltip:AddLine(LFG_LIST_DETAILS)
 					end
-					GameTooltip:AddDoubleLine("Reason: "..(reason or ""), reasonText or "", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b, HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b);
+					GameTooltip:AddDoubleLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
 					GameTooltip:Show()
 				end
 			end
@@ -264,21 +300,26 @@ function CalReminder:CreateCalReminderButtons()
 	Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription, contextData)
 		-- Append a new section to the end of the menu.
 		local inviteIndex = ownerRegion and ownerRegion.inviteIndex
-		local inviteInfo = C_Calendar.EventGetInvite(inviteIndex);
+		local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
 		if not inviteInfo or inviteInfo.modStatus ~= "CREATOR" then
 			rootDescription:QueueDivider()
 		end
 		rootDescription:CreateTitle("CalReminder")
-		local submenu = rootDescription:CreateButton("Tentative reason");
-		for _, option in ipairs(dropdownOptions) do
-			submenu:CreateButton(option.text, function()
+		local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
+		local targetPlayer = CalReminder_addRealm(inviteInfo.name)
+		for optionValue, optionText in ipairs(reasonsDropdownOptions) do
+			local texture = "" -- 130750
+			if tostring(optionValue) == getCalReminderData(targetPlayer, "reason", inviteInfo and inviteInfo.eventID) then
+				texture = 130751
+			end
+			submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..optionText.."|r", function()
 				C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
-				local targetPlayer = CalReminder_addRealm(inviteInfo.name)
+				
 				if inviteInfo then
-					setCalReminderData(targetPlayer, "reason", option.value, inviteInfo.eventID)
+					setCalReminderData(targetPlayer, "reason", optionValue, inviteInfo.eventID)
 					ShowReasonPopup(inviteInfo.eventID, targetPlayer)
 				end
-			end);
+			end)
 		end
 	end)
 

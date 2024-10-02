@@ -15,4 +15,12 @@ L["CALREMINDER_ACHIV_REMINDER"] = "Invitation en attente"
 L["CALREMINDER_OPTIONS_NPC"] = "PNJ %s"
 L["CALREMINDER_OPTIONS_NPC_DESC"] = "Choisissez le PNJ côté %s qui vous rappellera les événements proches."
 
+L["CALREMINDER_TENTATIVE_REASON"] = "Raison : "
+L["CALREMINDER_TENTATIVE_REASON1"] = "Léger retard"
+L["CALREMINDER_TENTATIVE_REASON2"] = "Gros retard"
+L["CALREMINDER_TENTATIVE_REASON3"] = "Pas sûr d'être là"
+L["CALREMINDER_TENTATIVE_REASON4"] = "Pas le bon niveau"
+L["CALREMINDER_TENTATIVE_REASON5"] = "Départ avant la fin"
+L["CALREMINDER_TENTATIVE_REASON6"] = "Autre (préciser)"
+
 end
