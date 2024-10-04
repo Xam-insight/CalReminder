@@ -3,6 +3,10 @@ function CalReminder_playerCharacter()
 	return CalReminder_addRealm(playerName, playerRealm)
 end
 
+function CalReminder_isPlayerCharacter(aName)
+	return CalReminder_playerCharacter() == CalReminder_addRealm(aName)
+end
+
 function CalReminder_addRealm(aName, aRealm)
 	if aName and not string.match(aName, "-") then
 		if aRealm and aRealm ~= "" then

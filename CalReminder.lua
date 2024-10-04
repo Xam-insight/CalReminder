@@ -278,6 +278,10 @@ function CalReminder:SaveEventData()
 				setCalReminderData(actualEventInfo.eventID, "day",   actualEventInfo.startTime and actualEventInfo.startTime.monthDay)
 				setCalReminderData(actualEventInfo.eventID, "year",  actualEventInfo.startTime and actualEventInfo.startTime.year)
 
+				if actualEventInfo.modStatus == "CREATOR" or actualEventInfo.modStatus == "MODERATOR" then
+					CalReminder_shareDataWithInvitees(true)
+				end
+
 				-- Retrieves the event's invitees
 				local numInvites = C_Calendar.GetNumInvites()
 
@@ -381,14 +385,14 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 			print(CALENDAR_STATUS_INVITED..":")
 			for _, inviteInfo in ipairs(invitedList) do
 				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
-				SendChatMessage("test", "WHISPER", nil, inviteInfo.guid)
+				SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
 			end
 
 			-- Display the results for Tentative
 			print(CALENDAR_STATUS_TENTATIVE..":")
 			for _, inviteInfo in ipairs(tentativeList) do
 				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
-				SendChatMessage("test", "WHISPER", nil, inviteInfo.guid)
+				SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
 			end
 		end)
 	end

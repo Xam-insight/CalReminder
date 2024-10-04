@@ -13,7 +13,7 @@ local function encodeAndSendData(data, target, messageType)
 	CalReminder:SendCommMessage(CalReminderGlobal_CommPrefix, text, "WHISPER", target)
 end
 
-function CalReminder_shareDataWithInvitees()
+function CalReminder_shareDataWithInvitees(onlyCall)
 	local currentTime = time()
 	local playersForSharing = {}
 	for eventID, data in pairs(CalReminderData.events) do
@@ -34,13 +34,21 @@ function CalReminder_shareDataWithInvitees()
 	end
 	
 	for player, data in pairs(playersForSharing) do
-		_, _, _, _, _, name, server = GetPlayerInfoByGUID(player)
-		encodeAndSendData(CalReminderData, CalReminder_addRealm(name, server), "FullData")
+		local _, _, _, _, _, name, server = GetPlayerInfoByGUID(player)
+		local target = CalReminder_addRealm(name, server)
+		if not CalReminder_isPlayerCharacter(target) then
+			if onlyCall then
+				lastCalReminderSendCommMessage = GetTime()
+				CalReminder:SendCommMessage(CalReminderGlobal_CommPrefix, "DataCall", "WHISPER", target)
+			else
+				encodeAndSendData(CalReminderData, target, "FullData")
+			end
+		end
 	end
 end
 
 function CalReminder:ReceiveData(prefix, message, distribution, sender)
-	if prefix == CalReminderGlobal_CommPrefix then
+	if prefix == CalReminderGlobal_CommPrefix and not CalReminder_isPlayerCharacter(sender) then
 		local senderFullName = CalReminder_addRealm(sender)
 		--CalReminder:Print(time().." - Received message from "..sender..".")
 		local messageType, messageMessage = strsplit("#", message, 2)
@@ -77,6 +85,8 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 					encodeAndSendData(fixedObsoleteSentValues, senderFullName, "FixedObloleteData")
 				end
 			end
+		elseif messageType == "DataCall" then
+			encodeAndSendData(CalReminderData, senderFullName, "FullData")
 		end
 	end
 end
