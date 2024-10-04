@@ -1,4 +1,4 @@
-CalReminder = LibStub("AceAddon-3.0"):NewAddon("CalReminder", "AceConsole-3.0", "AceEvent-3.0")
+CalReminder = LibStub("AceAddon-3.0"):NewAddon("CalReminder", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("CalReminder", true)
 local ACD = LibStub("AceConfigDialog-3.0")
 
@@ -15,6 +15,7 @@ firstEventIsToday = false
 
 function CalReminder:OnInitialize()
 	-- Called when the addon is loaded
+	self:RegisterComm(CalReminderGlobal_CommPrefix, "ReceiveData")
 	
 	if not maxDaysToCheck then
 		maxDaysToCheck = 31
@@ -23,6 +24,26 @@ function CalReminder:OnInitialize()
 	elseif maxDaysToCheck > 62 then
 		maxDaysToCheck = 62
 	end
+	
+	if not CalReminderData then
+		CalReminderData = {}
+	end
+	if not CalReminderData.events then
+		CalReminderData.events = {}
+	end
+	
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", self.ChatFilter)
+end
+
+local playerNotFoundMsg = string.gsub(ERR_CHAT_PLAYER_NOT_FOUND_S, "%%s", "(.-)")
+function CalReminder:ChatFilter(event, msg, author, ...)
+	if string.match(msg, playerNotFoundMsg) then
+		local actualTime = GetTime()
+		if lastCalReminderSendCommMessage and actualTime <= lastCalReminderSendCommMessage + 5 then
+			return true
+		end
+	end
+	return false, msg, author, ...
 end
 
 function CalReminder:OnEnable()
@@ -30,7 +51,10 @@ function CalReminder:OnEnable()
 	C_Calendar.OpenCalendar()
 
 	self:RegisterEvent("PLAYER_STARTED_MOVING", "ReloadData") -- Not SPELLS_CHANGED we want to be sure the player is not afk.
-	self:RegisterEvent("CALENDAR_OPEN_EVENT", "CreateCalReminderButtons")
+	self:RegisterEvent("ADDON_LOADED", "CreateCalReminderButtons")
+	self:RegisterEvent("CALENDAR_OPEN_EVENT", "SaveEventData")
+	self:RegisterEvent("CALENDAR_UPDATE_INVITE_LIST", "SaveEventData")
+	
     --self:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
 
 	self:RegisterChatCommand("crm", "CalReminderChatCommand")
@@ -48,23 +72,6 @@ function CalReminder_OpenOptions()
 	ACD:Open("CalReminder")
 end
 
-function CalReminder_playerCharacter()
-	local playerName, playerRealm = UnitNameUnmodified("player")
-	return CalReminder_addRealm(playerName, playerRealm)
-end
-
-function CalReminder_addRealm(aName, aRealm)
-	if aName and not string.match(aName, "-") then
-		if aRealm and aRealm ~= "" then
-			aName = aName.."-"..aRealm
-		else
-			local realm = GetNormalizedRealmName() or UNKNOWN
-			aName = aName.."-"..realm
-		end
-	end
-	return aName
-end
-
 -- Function to retrieve the current event's unique ID
 local function CalReminder_getCurrentEventId()
 	local currentEventInfo = C_Calendar.GetEventIndex()
@@ -72,7 +79,7 @@ local function CalReminder_getCurrentEventId()
 	return eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 end
 
-local function getCalReminderData(player, data, eventID)
+function getCalReminderData(eventID, data, player)
 	if not data then
 		return nil
 	end
@@ -82,7 +89,9 @@ local function getCalReminderData(player, data, eventID)
 			return nil
 		end
 	end
-	local value = CalReminderData and CalReminderData[eventID] and CalReminderData[eventID][player] and CalReminderData[eventID][player][data]
+	local value = CalReminderData and CalReminderData.events and CalReminderData.events[eventID]
+		and ( (player and CalReminderData.events[eventID].players and CalReminderData.events[eventID].players[player] and CalReminderData.events[eventID].players[player][data])
+			or (CalReminderData.events[eventID].infos and CalReminderData.events[eventID].infos[data]) )
 	if value ~= nil then
 		value, dataTime = strsplit("|", tostring(value), 2)
 		if dataTime and dataTime == "" then
@@ -95,11 +104,7 @@ local function getCalReminderData(player, data, eventID)
 	return value, dataTime
 end
 
-local function CalReminder_getTimeUTCinMS()
-	return tostring(time(date("!*t")))
-end
-
-local function setCalReminderData(player, data, aValue, eventID)
+local function setCalReminderData(eventID, data, aValue, player)
 	local value, dataTime = strsplit("|", tostring(aValue), 2)
 	if not data then
 		return
@@ -110,22 +115,26 @@ local function setCalReminderData(player, data, aValue, eventID)
 			return
 		end
 	end
-	if not player then
-		player = CalReminder_playerCharacter()
+	if not CalReminderData.events[eventID] then
+		CalReminderData.events[eventID] = {}
 	end
-	if not CalReminderData then
-		CalReminderData = {}
+	if not CalReminderData.events[eventID].players then
+		CalReminderData.events[eventID].players = {}
 	end
-	if not CalReminderData[eventID] then
-		CalReminderData[eventID] = {}
+	if not CalReminderData.events[eventID].infos then
+		CalReminderData.events[eventID].infos = {}
 	end
-	if not CalReminderData[eventID][player] then
-		CalReminderData[eventID][player] = {}
+	if player and not CalReminderData.events[eventID].players[player] then
+		CalReminderData.events[eventID].players[player] = {}
 	end
 	if not dataTime or dataTime == "" then
 		dataTime = tostring(CalReminder_getTimeUTCinMS())
 	end
-	CalReminderData[eventID][player][data] = value.."|"..dataTime
+	if player then
+		CalReminderData.events[eventID].players[player][data] = value.."|"..dataTime
+	else
+		CalReminderData.events[eventID].infos[data] = value.."|"..dataTime
+	end
 end
 
 local function GetEventInvites()
@@ -181,14 +190,15 @@ local function ShowReasonPopup(eventID, player)
         OnAccept = function(self)
 			-- Get the reason from the text box
 			local reasonText = self.editBox:GetText()
-			local reasonID = getCalReminderData(player, "reason", eventID)
+			local reasonID = getCalReminderData(eventID, "reason", player)
 			reasonID = tonumber(reasonID)
 			local reason = reasonID and reasonsDropdownOptions[reasonID]
 			if reasonText == reason then
 				reasonText = nil
 			end
-			setCalReminderData(player, "reasonText", reasonText, eventID)
-			setCalReminderData("lastReasonText", reasonID, reasonText, "CalReminder_defaultValues")
+			setCalReminderData(eventID, "reasonText", reasonText, player)
+			setCalReminderData("CalReminder_defaultValues", reasonID, reasonText, "lastReasonText")
+			CalReminder_shareDataWithInvitees()
         end,
         EditBoxOnTextChanged = function(self)
             -- Enable or disable the "Submit" button based on text input
@@ -215,11 +225,11 @@ local function ShowReasonPopup(eventID, player)
 				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
 				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 			end
-			local reasonID = getCalReminderData(player, "reason", eventID)
+			local reasonID = getCalReminderData(eventID, "reason", player)
 			reasonID = tonumber(reasonID)
 			local reason = reasonID and reasonsDropdownOptions[reasonID]
-			local reasonText = getCalReminderData(player, "reasonText", eventID)
-			local lastReasonText = getCalReminderData("lastReasonText", reasonID, "CalReminder_defaultValues")
+			local reasonText = getCalReminderData(eventID, "reasonText", player)
+			local lastReasonText = getCalReminderData("CalReminder_defaultValues", reasonID, "lastReasonText")
 			self.editBox:SetText(reasonText or lastReasonText or reason or "")
 			self.editBox:SetFocus()
 			self.editBox:HighlightText()
@@ -245,8 +255,8 @@ local function ShowTentativeDropdown(player)
 				CalendarViewEventTentativeButton_OnClick(self)
 				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
 				if eventID then
-					local targetPlayer = player or CalReminder_playerCharacter()
-					setCalReminderData(targetPlayer, "reason", optionValue, eventID)
+					local targetPlayer = player
+					setCalReminderData(eventID, "reason", optionValue, targetPlayer)
 					ShowReasonPopup(eventID, targetPlayer)
 				end
             end
@@ -258,140 +268,169 @@ local function ShowTentativeDropdown(player)
     ToggleDropDownMenu(1, nil, dropdown, "CalendarViewEventTentativeButton", 0, 0)
 end
 
-function CalReminder:CreateCalReminderButtons()
-	CalReminder:UnregisterEvent("CALENDAR_OPEN_EVENT")
-	
-	-- Hook the function that shows tootip on invite list buttons
-	hooksecurefunc("CalendarEventInviteListButton_OnEnter", function(self)
-		if ( self.inviteIndex ) then
-			local inviteInfo = C_Calendar.EventGetInvite(self.inviteIndex)
-			if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
-				local currentEventId = CalReminder_getCurrentEventId()
-				local reason = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reason", currentEventId)
-				reason = tonumber(reason)
-				reason = (reason and reasonsDropdownOptions[reason]) or ""
-				local reasonText = getCalReminderData(CalReminder_addRealm(inviteInfo.name), "reasonText", currentEventId)
-				if reasonText == reason then
-					reasonText = ""
-				end
-				if reason or reasonText then
-					local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex)
-					if not responseTime or responseTime.weekday == 0 then
-						GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
-						GameTooltip:AddLine(LFG_LIST_DETAILS)
+function CalReminder:SaveEventData()
+	local actualEventIndex = C_Calendar.GetEventIndex()
+	if actualEventIndex then
+		local actualEventInfo = actualEventIndex and C_Calendar.GetDayEvent(actualEventIndex.offsetMonths, actualEventIndex.monthDay, actualEventIndex.eventIndex)
+		if actualEventInfo then
+			if actualEventInfo.calendarType == "PLAYER" or actualEventInfo.calendarType == "GUILD_EVENT" then
+				setCalReminderData(actualEventInfo.eventID, "month", actualEventInfo.startTime and actualEventInfo.startTime.month)
+				setCalReminderData(actualEventInfo.eventID, "day",   actualEventInfo.startTime and actualEventInfo.startTime.monthDay)
+				setCalReminderData(actualEventInfo.eventID, "year",  actualEventInfo.startTime and actualEventInfo.startTime.year)
+
+				-- Retrieves the event's invitees
+				local numInvites = C_Calendar.GetNumInvites()
+
+				for i = 1, numInvites do
+					local inviteInfo = C_Calendar.EventGetInvite(i)
+					if inviteInfo then
+						setCalReminderData(actualEventInfo.eventID, "modStatus", inviteInfo.modStatus, inviteInfo.guid)
+						setCalReminderData(actualEventInfo.eventID, "status", inviteInfo.inviteStatus, inviteInfo.guid)
 					end
-					GameTooltip:AddLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
-					GameTooltip:AddLine(reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
-					GameTooltip:Show()
 				end
 			end
 		end
-	end)
-	
-	-- Hook the function that updates calendar invite status
-	hooksecurefunc(C_Calendar, "EventSetInviteStatus", function(inviteIndex, statusOption)
-		-- Check if the status is set to Tentative
-		if statusOption == Enum.CalendarStatus.Tentative then
-			-- Show the popup to ask for the reason
-			local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
-			if inviteInfo then
-				ShowReasonPopup(CalReminder_getCurrentEventId(), CalReminder_addRealm(inviteInfo.name))
-			end
-		end
-	end)
-	
-	Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription, contextData)
-		-- Append a new section to the end of the menu.
-		local inviteIndex = ownerRegion and ownerRegion.inviteIndex
-		local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
-		if not inviteInfo or inviteInfo.modStatus ~= "CREATOR" then
-			rootDescription:QueueDivider()
-		end
-		rootDescription:CreateTitle("CalReminder")
-		local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
-		local targetPlayer = CalReminder_addRealm(inviteInfo.name)
-		for optionValue, optionText in ipairs(reasonsDropdownOptions) do
-			local texture = "" -- 130750
-			if tostring(optionValue) == getCalReminderData(targetPlayer, "reason", inviteInfo and inviteInfo.eventID) then
-				texture = 130751
-			end
-			submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..optionText.."|r", function()
-				C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
-				
-				if inviteInfo then
-					setCalReminderData(targetPlayer, "reason", optionValue, inviteInfo.eventID)
-					ShowReasonPopup(inviteInfo.eventID, targetPlayer)
-				end
-			end)
-		end
-	end)
-
-	-- Hook into the button's OnClick event
-	CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
-		ShowTentativeDropdown()  -- Show the dropdown when the button is clicked
-	end)
-	
-	local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
-    myButton:SetSize(120, 22)  -- Taille du bouton
-    myButton:SetText(BATTLEGROUND_HOLIDAY)  -- Texte du bouton
-    myButton:SetPoint("TOPLEFT", CalendarCreateEventDescriptionContainer.ScrollingEditBox, "BOTTOMLEFT", -3, -4)  -- Position du bouton
-
-    -- Fonctionnalité du bouton (ce que fait ton bouton quand on clique dessus)
-    myButton:SetScript("OnClick", function(self)
-        -- Example usage: retrieve the two lists for Invited and Tentative statuses
-		local invitedList, tentativeList = GetEventInvites()
-
-		-- Display the results for Invited
-		print(CALENDAR_STATUS_INVITED..":")
-		for _, invite in ipairs(invitedList) do
-			print(string.format("Invite: %s (%s) - Status: %d", CalReminder_addRealm(invite.name), invite.className, invite.inviteStatus))
-			SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
-		end
-
-		-- Display the results for Tentative
-		print(CALENDAR_STATUS_TENTATIVE..":")
-		for _, invite in ipairs(tentativeList) do
-			print(string.format("Invite: %s (%s) - Status: %d", CalReminder_addRealm(invite.name), invite.className, invite.inviteStatus))
-			SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
-		end
-    end)
+	end
 end
 
-function CalReminder:ReloadData()
-	CalReminder:UnregisterEvent("PLAYER_STARTED_MOVING")
-	CalReminder:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
-	local curHour, curMinute = GetGameTime()
-	local curDate = C_DateAndTime.GetCurrentCalendarTime()
-	local calDate = C_Calendar.GetMonthInfo()
-	local month, day, year = calDate.month, curDate.monthDay, calDate.year
-	local curMonth, curYear = curDate.month, curDate.year
-	local monthOffset = -12 * (curYear - year) + month - curMonth
-	local numEvents = 0
+function CalReminder:CreateCalReminderButtons(event, addOnName)
+	if addOnName == "Blizzard_Calendar" then
+		CalReminder:UnregisterEvent("ADDON_LOADED")
+		
+		-- Hook the function that shows tootip on invite list buttons
+		hooksecurefunc("CalendarEventInviteListButton_OnEnter", function(self)
+			if ( self.inviteIndex ) then
+				local inviteInfo = C_Calendar.EventGetInvite(self.inviteIndex)
+				if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
+					local currentEventId = CalReminder_getCurrentEventId()
+					local reason = getCalReminderData(currentEventId, "reason", inviteInfo.guid)
+					reason = tonumber(reason)
+					reason = (reason and reasonsDropdownOptions[reason]) or ""
+					local reasonText = getCalReminderData(currentEventId, "reasonText", inviteInfo.guid)
+					if reasonText == reason then
+						reasonText = ""
+					end
+					if reason or reasonText then
+						local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex)
+						if not responseTime or responseTime.weekday == 0 then
+							GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
+							GameTooltip:AddLine(LFG_LIST_DETAILS)
+						end
+						GameTooltip:AddLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
+						GameTooltip:AddLine(reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
+						GameTooltip:Show()
+					end
+				end
+			end
+		end)
+		
+		-- Hook the function that updates calendar invite status
+		hooksecurefunc(C_Calendar, "EventSetInviteStatus", function(inviteIndex, statusOption)
+			-- Check if the status is set to Tentative
+			if statusOption == Enum.CalendarStatus.Tentative then
+				-- Show the popup to ask for the reason
+				local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
+				if inviteInfo then
+					ShowReasonPopup(CalReminder_getCurrentEventId(), inviteInfo.guid)
+				end
+			end
+		end)
+		
+		Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription, contextData)
+			-- Append a new section to the end of the menu.
+			local inviteIndex = ownerRegion and ownerRegion.inviteIndex
+			local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
+			if not inviteInfo or inviteInfo.modStatus ~= "CREATOR" then
+				rootDescription:QueueDivider()
+			end
+			rootDescription:CreateTitle("CalReminder")
+			local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
+			local targetPlayer = inviteInfo.guid
+			for optionValue, optionText in ipairs(reasonsDropdownOptions) do
+				local texture = "" -- 130750
+				if tostring(optionValue) == getCalReminderData(inviteInfo and inviteInfo.eventID, "reason", targetPlayer) then
+					texture = 130751
+				end
+				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..optionText.."|r", function()
+					C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
+					
+					if inviteInfo then
+						setCalReminderData(inviteInfo.eventID, "reason", optionValue, targetPlayer)
+						ShowReasonPopup(inviteInfo.eventID, targetPlayer)
+					end
+				end)
+			end
+		end)
 
-	local monthOffsetLoopId = monthOffset
-	local dayLoopId = day
+		-- Hook into the button's OnClick event
+		CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
+			ShowTentativeDropdown()  -- Show the dropdown when the button is clicked
+		end)
+		
+		local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
+		myButton:SetSize(120, 22)  -- Taille du bouton
+		myButton:SetText(BATTLEGROUND_HOLIDAY)  -- Texte du bouton
+		myButton:SetPoint("TOPLEFT", CalendarCreateEventDescriptionContainer.ScrollingEditBox, "BOTTOMLEFT", -3, -4)  -- Position du bouton
+
+		-- Fonctionnalité du bouton (ce que fait ton bouton quand on clique dessus)
+		myButton:SetScript("OnClick", function(self)
+			-- Example usage: retrieve the two lists for Invited and Tentative statuses
+			local invitedList, tentativeList = GetEventInvites()
+
+			-- Display the results for Invited
+			print(CALENDAR_STATUS_INVITED..":")
+			for _, inviteInfo in ipairs(invitedList) do
+				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
+				SendChatMessage("test", "WHISPER", nil, inviteInfo.guid)
+			end
+
+			-- Display the results for Tentative
+			print(CALENDAR_STATUS_TENTATIVE..":")
+			for _, inviteInfo in ipairs(tentativeList) do
+				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
+				SendChatMessage("test", "WHISPER", nil, inviteInfo.guid)
+			end
+		end)
+	end
+end
+
+function CalReminder_browseEvents()
+	local curHour, curMinute = GetGameTime()
+	local curDay, curMonth, curYear = CalReminder_getCurrentDate()
+	local calDate = C_Calendar.GetMonthInfo()
+	local calMonth, calYear = calDate.month, calDate.year
+	local monthOffset = 12 * (curYear - calYear) + curMonth - calMonth
+		
+	local actualEventInfo = C_Calendar.GetEventIndex()
+	C_Calendar.SetMonth(monthOffset)
+	
+	local monthOffsetLoopId = 0
+	local dayLoopId = curDay
 	local loopId = 1
 	local dayOffsetLoopId = 0
+	firstPendingEvent = false
 	while not firstPendingEvent and dayOffsetLoopId <= maxDaysToCheck do
 		while not firstPendingEvent and dayLoopId <= 31 and dayOffsetLoopId <= maxDaysToCheck do
-			numEvents = C_Calendar.GetNumDayEvents(monthOffsetLoopId, dayLoopId)
+			local numEvents = C_Calendar.GetNumDayEvents(0, dayLoopId)
 			while not firstPendingEvent and loopId <= numEvents do
-				firstEvent = C_Calendar.GetDayEvent(monthOffsetLoopId, dayLoopId, loopId)
-				if firstEvent then
+				local event = C_Calendar.GetDayEvent(0, dayLoopId, loopId)
+				if event then
 					CalReminder:UnregisterEvent("CALENDAR_ACTION_PENDING")
-					if firstEvent.calendarType == "PLAYER" or firstEvent.calendarType == "GUILD_EVENT" then
-						if monthOffsetLoopId == monthOffset
-							and dayLoopId == day
-								and curHour >= firstEvent.startTime.hour
-									and curMinute >= firstEvent.startTime.minute then 
+					if event.calendarType == "PLAYER" or event.calendarType == "GUILD_EVENT" then
+						if monthOffsetLoopId == 0
+							and dayLoopId == curDay
+								and curHour >= event.startTime.hour
+									and curMinute >= event.startTime.minute then 
 							--too late
 						else
-							if firstEvent.inviteStatus == Enum.CalendarStatus.Invited
-									or firstEvent.inviteStatus == Enum.CalendarStatus.Tentative then
+							if not firstPendingEvent 
+									and (event.inviteStatus == Enum.CalendarStatus.Invited
+										or event.inviteStatus == Enum.CalendarStatus.Tentative) then
 								--need response
-								if dayLoopId == day then
+								firstEvent = event
+								if dayLoopId == curDay then
 									firstEventIsToday = true
-								elseif dayLoopId == day + 1 then
+								elseif dayLoopId == curDay + 1 then
 									firstEventIsTomorrow = true
 								end
 								firstEventMonthOffset = monthOffsetLoopId
@@ -408,9 +447,25 @@ function CalReminder:ReloadData()
 			dayOffsetLoopId = dayOffsetLoopId + 1
 			loopId = 1
 		end
+		C_Calendar.SetMonth(1)
 		monthOffsetLoopId = monthOffsetLoopId + 1
 		dayLoopId = 1
 	end
+	
+	C_Calendar.SetMonth(- monthOffset - monthOffsetLoopId)
+	if actualEventInfo then
+		C_Calendar.OpenEvent(0, actualEventInfo.monthDay, actualEventInfo.eventIndex)
+	else
+		C_Calendar.CloseEvent()
+	end
+end
+
+function CalReminder:ReloadData()
+	CalReminder:UnregisterEvent("PLAYER_STARTED_MOVING")
+	CalReminder:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
+
+	CalReminder_browseEvents()
+	CalReminder_shareDataWithInvitees()
 	
 	if firstPendingEvent and firstEvent then
 		englishFaction, localizedFaction = UnitFactionGroup("player")
