@@ -6,13 +6,40 @@ local secondsInDay = 86400
 local daysThreshold = 62
 
 local function encodeAndSendData(data, target, messageType)
-	local dataToSend = {}
-	dataToSend.events = data.events
-	dataToSend["version"] = C_AddOns.GetAddOnMetadata("CalReminder", "Version")
-	local s = CalReminder:Serialize(data)
+	local s = CalReminder:Serialize(dataToSend)
 	local text = messageType.."#"..s
 	lastCalReminderSendCommMessage = GetTime()
 	CalReminder:SendCommMessage(CalReminderGlobal_CommPrefix, text, "WHISPER", target)
+end
+
+local function CalReminder_filterCalReminderData()
+	local dataToSend = {}
+	dataToSend["version"] = C_AddOns.GetAddOnMetadata("CalReminder", "Version")
+	for event, eventData in pairs(CalReminderData.events) do
+		if not eventData.obsolete then
+			dataToSend[event] = {}
+			for player, playerData in pairs(eventData.players) do
+				local playerStatus = getCalReminderData(event, "status", player)
+				if playerStatus and playerStatus == tostring(Enum.CalendarStatus.Tentative) then
+					--local playerReason = getCalReminderData(event, "reason", player)
+					--local playerReasonText = getCalReminderData(event, "reasonText", player)
+					dataToSend[event][player] = {}
+					dataToSend[event][player].reason     = eventData.players[player].reason
+					dataToSend[event][player].reasonText = eventData.players[player].reasonText
+					if CalReminder_countTableElements(dataToSend[event][player]) == 0 then
+						dataToSend[event][player] = nil
+					end
+				end
+			end
+			if CalReminder_countTableElements(dataToSend[event]) == 0 then
+				dataToSend[event] = nil
+			end
+		end
+	end
+	if CalReminder_countTableElements(dataToSend) == 0 then
+		dataToSend = nil
+	end
+	return dataToSend
 end
 
 function CalReminder_shareDataWithInvitees(onlyCall)
@@ -27,6 +54,8 @@ function CalReminder_shareDataWithInvitees(onlyCall)
 			
 			if (currentTime - eventTimeStamp) > (daysThreshold * secondsInDay) then
 				CalReminderData.events[eventID] = nil
+			elseif (currentTime - eventTimeStamp) > 0 then
+				CalReminderData.events[eventID].obsolete = true
 			else
 				for player, playerData in pairs(data.players) do
 					playersForSharing[player] = true
@@ -35,6 +64,7 @@ function CalReminder_shareDataWithInvitees(onlyCall)
 		end
 	end
 	
+	local dataToSend
 	for player, data in pairs(playersForSharing) do
 		local _, _, _, _, _, name, server = GetPlayerInfoByGUID(player)
 		local target = CalReminder_addRealm(name, server)
@@ -43,7 +73,12 @@ function CalReminder_shareDataWithInvitees(onlyCall)
 				lastCalReminderSendCommMessage = GetTime()
 				CalReminder:SendCommMessage(CalReminderGlobal_CommPrefix, "DataCall", "WHISPER", target)
 			else
-				encodeAndSendData(CalReminderData, target, "FullData")
+				if not dataToSend then
+					dataToSend = CalReminder_filterCalReminderData()
+				end
+				if dataToSend then
+					encodeAndSendData(dataToSend, target, "FullData")
+				end
 			end
 		end
 	end
@@ -61,11 +96,9 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 				CalReminder:Print(time().." - Received corrupted data from "..sender..".")
 			else
 				local fixedObsoleteSentValues = {}
-				fixedObsoleteSentValues.events = {}
-				for eventID, eventData in pairs(o.events) do
-					for player, playerData in pairs(eventData.players) do
+				for eventID, eventData in pairs(o) do
+					for player, playerData in pairs(eventData) do
 						for data, value in pairs(playerData) do
-							if name == "Farfouille" then print("******", eventID, name, data, value) end
 							local actualValue, actualValueTime = getCalReminderData(eventID, data, player)
 							local newValue, newValueTime = strsplit("|", value, 2)
 							if newValue == "nil" then
@@ -75,24 +108,24 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 								if not actualValueTime or (newValueTime and newValueTime > actualValueTime) then
 									setCalReminderData(eventID, data, newValue, player)
 								else
-									if not fixedObsoleteSentValues.events[eventID] then
-										fixedObsoleteSentValues.events[eventID] = {}
+									if not fixedObsoleteSentValues[eventID] then
+										fixedObsoleteSentValues[eventID] = {}
 									end
-									if not fixedObsoleteSentValues.events[eventID].players then
-										fixedObsoleteSentValues.events[eventID].players = {}
+									if not fixedObsoleteSentValues[eventID] then
+										fixedObsoleteSentValues[eventID] = {}
 									end
-									fixedObsoleteSentValues.events[eventID].players[player] = CalReminderData.events[eventID].players[player]
+									fixedObsoleteSentValues[eventID][player] = CalReminderData.events[eventID].players[player]
 								end
 							end
 						end
 					end
 				end
-				if messageType == "FullData" and CalReminder_countTableElements(fixedObsoleteSentValues.events) > 0 then
+				if messageType == "FullData" and CalReminder_countTableElements(fixedObsoleteSentValues) > 0 then
 					encodeAndSendData(fixedObsoleteSentValues, senderFullName, "FixedObloleteData")
 				end
 			end
 		elseif messageType == "DataCall" then
-			encodeAndSendData(CalReminderData, senderFullName, "FullData")
+			encodeAndSendData(CalReminder_filterCalReminderData(), senderFullName, "FullData")
 		end
 	end
 end
