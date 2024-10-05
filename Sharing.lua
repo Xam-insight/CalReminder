@@ -6,7 +6,9 @@ local secondsInDay = 86400
 local daysThreshold = 62
 
 local function encodeAndSendData(data, target, messageType)
-	data["version"] = C_AddOns.GetAddOnMetadata("CalReminder", "Version")
+	local dataToSend = {}
+	dataToSend.events = data.events
+	dataToSend["version"] = C_AddOns.GetAddOnMetadata("CalReminder", "Version")
 	local s = CalReminder:Serialize(data)
 	local text = messageType.."#"..s
 	lastCalReminderSendCommMessage = GetTime()
@@ -63,20 +65,24 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 				for eventID, eventData in pairs(o.events) do
 					for player, playerData in pairs(eventData.players) do
 						for data, value in pairs(playerData) do
+							if name == "Farfouille" then print("******", eventID, name, data, value) end
 							local actualValue, actualValueTime = getCalReminderData(eventID, data, player)
 							local newValue, newValueTime = strsplit("|", value, 2)
-							if not actualValueTime or (newValueTime and newValueTime > actualValueTime) then
-								print("NEW")
-								setCalReminderData(eventID, data, newValue, player)
-							elseif actualValue ~= newValue and actualValueTime ~= newValueTime then
-								print("OBSOLETE", data, actualValue, newValue, actualValueTime, newValueTime)
-								if not fixedObsoleteSentValues.events[eventID] then
-									fixedObsoleteSentValues.events[eventID] = {}
+							if newValue == "nil" then
+								newValue = nil
+							end
+							if actualValue ~= newValue then
+								if not actualValueTime or (newValueTime and newValueTime > actualValueTime) then
+									setCalReminderData(eventID, data, newValue, player)
+								else
+									if not fixedObsoleteSentValues.events[eventID] then
+										fixedObsoleteSentValues.events[eventID] = {}
+									end
+									if not fixedObsoleteSentValues.events[eventID].players then
+										fixedObsoleteSentValues.events[eventID].players = {}
+									end
+									fixedObsoleteSentValues.events[eventID].players[player] = CalReminderData.events[eventID].players[player]
 								end
-								if not fixedObsoleteSentValues.events[eventID].players then
-									fixedObsoleteSentValues.events[eventID].players = {}
-								end
-								fixedObsoleteSentValues.events[eventID].players[player] = CalReminderData.events[eventID].players[player]
 							end
 						end
 					end

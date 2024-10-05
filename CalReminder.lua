@@ -28,6 +28,12 @@ function CalReminder:OnInitialize()
 	if not CalReminderData then
 		CalReminderData = {}
 	end
+	if not CalReminderData.defaultValues then
+		CalReminderData.defaultValues = {}
+	end
+	if not CalReminderData.defaultValues.lastReasonText then
+		CalReminderData.defaultValues.lastReasonText = {}
+	end
 	if not CalReminderData.events then
 		CalReminderData.events = {}
 	end
@@ -104,7 +110,7 @@ function getCalReminderData(eventID, data, player)
 	return value, dataTime
 end
 
-local function setCalReminderData(eventID, data, aValue, player)
+function setCalReminderData(eventID, data, aValue, player)
 	local value, dataTime = strsplit("|", tostring(aValue), 2)
 	if not data then
 		return
@@ -169,12 +175,21 @@ end
 
 -- Create a table of options with predefined text for the dropdown menu
 local reasonsDropdownOptions = {
-    L["CALREMINDER_TENTATIVE_REASON1"],
-    L["CALREMINDER_TENTATIVE_REASON2"],
-    L["CALREMINDER_TENTATIVE_REASON3"],
-    L["CALREMINDER_TENTATIVE_REASON4"],
-    L["CALREMINDER_TENTATIVE_REASON5"],
-    L["CALREMINDER_TENTATIVE_REASON6"]
+    ["Reason1"] = L["CALREMINDER_TENTATIVE_REASON1"],
+    ["Reason2"] = L["CALREMINDER_TENTATIVE_REASON2"],
+    ["Reason3"] = L["CALREMINDER_TENTATIVE_REASON3"],
+    ["Reason4"] = L["CALREMINDER_TENTATIVE_REASON4"],
+    ["Reason5"] = L["CALREMINDER_TENTATIVE_REASON5"],
+    ["Reason6"] = L["CALREMINDER_TENTATIVE_REASON6"]
+}
+
+local reasonsDropdownOptionsOrder = {
+    "Reason1",
+    "Reason2",
+    "Reason3",
+    "Reason4",
+    "Reason5",
+    "Reason6"
 }
 
 -- Function to create and show the popup with dropdown and text input
@@ -191,13 +206,13 @@ local function ShowReasonPopup(eventID, player)
 			-- Get the reason from the text box
 			local reasonText = self.editBox:GetText()
 			local reasonID = getCalReminderData(eventID, "reason", player)
-			reasonID = tonumber(reasonID)
 			local reason = reasonID and reasonsDropdownOptions[reasonID]
 			if reasonText == reason then
 				reasonText = nil
+			else
+				CalReminderData.defaultValues.lastReasonText[reasonID] = reasonText
 			end
 			setCalReminderData(eventID, "reasonText", reasonText, player)
-			setCalReminderData("CalReminder_defaultValues", reasonID, reasonText, "lastReasonText")
 			CalReminder_shareDataWithInvitees()
         end,
         EditBoxOnTextChanged = function(self)
@@ -226,10 +241,9 @@ local function ShowReasonPopup(eventID, player)
 				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 			end
 			local reasonID = getCalReminderData(eventID, "reason", player)
-			reasonID = tonumber(reasonID)
 			local reason = reasonID and reasonsDropdownOptions[reasonID]
 			local reasonText = getCalReminderData(eventID, "reasonText", player)
-			local lastReasonText = getCalReminderData("CalReminder_defaultValues", reasonID, "lastReasonText")
+			local lastReasonText = CalReminderData.defaultValues.lastReasonText[reasonID]
 			self.editBox:SetText(reasonText or lastReasonText or reason or "")
 			self.editBox:SetFocus()
 			self.editBox:HighlightText()
@@ -246,18 +260,17 @@ local function ShowTentativeDropdown(player)
     local dropdown = CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate")
     -- Initialize the dropdown
     UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
-        for optionValue, optionText in ipairs(reasonsDropdownOptions) do
+        for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
             local info = UIDropDownMenu_CreateInfo()
 			info.notCheckable = 1
-            info.text = optionText
+            info.text = reasonsDropdownOptions[optionValue]
             info.value = optionValue
             info.func = function()
 				CalendarViewEventTentativeButton_OnClick(self)
 				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
 				if eventID then
-					local targetPlayer = player
-					setCalReminderData(eventID, "reason", optionValue, targetPlayer)
-					ShowReasonPopup(eventID, targetPlayer)
+					setCalReminderData(eventID, "reason", optionValue, player)
+					ShowReasonPopup(eventID, player)
 				end
             end
             UIDropDownMenu_AddButton(info, level)
@@ -308,7 +321,6 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
 					local currentEventId = CalReminder_getCurrentEventId()
 					local reason = getCalReminderData(currentEventId, "reason", inviteInfo.guid)
-					reason = tonumber(reason)
 					reason = (reason and reasonsDropdownOptions[reason]) or ""
 					local reasonText = getCalReminderData(currentEventId, "reasonText", inviteInfo.guid)
 					if reasonText == reason then
@@ -350,12 +362,12 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 			rootDescription:CreateTitle("CalReminder")
 			local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
 			local targetPlayer = inviteInfo.guid
-			for optionValue, optionText in ipairs(reasonsDropdownOptions) do
+			for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
 				local texture = "" -- 130750
 				if tostring(optionValue) == getCalReminderData(inviteInfo and inviteInfo.eventID, "reason", targetPlayer) then
 					texture = 130751
 				end
-				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..optionText.."|r", function()
+				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].."|r", function()
 					C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
 					
 					if inviteInfo then
@@ -368,7 +380,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 
 		-- Hook into the button's OnClick event
 		CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
-			ShowTentativeDropdown()  -- Show the dropdown when the button is clicked
+			ShowTentativeDropdown(UnitGUID("player"))  -- Show the dropdown when the button is clicked
 		end)
 		
 		local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
