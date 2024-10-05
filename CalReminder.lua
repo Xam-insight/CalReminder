@@ -562,6 +562,17 @@ function CalReminder:ReloadData()
 	CalReminder:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
 
 	local calendarIsShown = CalendarFrame and CalendarFrame:IsShown()
+	local currentEventInfo
+	if calendarIsShown then
+		currentEventInfo = C_Calendar.GetEventIndex()
+		if currentEventInfo then
+			local _, curMonth, curYear = CalReminder_getCurrentDate()
+			local calDate = C_Calendar.GetMonthInfo()
+			local calMonth, calYear = calDate.month, calDate.year
+			local monthOffset = 12 * (curYear - calYear) + curMonth - calMonth
+			currentEventInfo.offsetMonths = monthOffset
+		end
+	end
 
 	if ( not C_AddOns.IsAddOnLoaded("Blizzard_Calendar") ) then
 		UIParentLoadAddOn("Blizzard_Calendar")
@@ -569,7 +580,11 @@ function CalReminder:ReloadData()
 	if ( Calendar_Toggle ) then
 		Calendar_Toggle()
 		if calendarIsShown then
-			ShowUIPanel(CalendarFrame)
+			if currentEventInfo then
+				CalReminderShowCalendar(-currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
+			else
+				ShowUIPanel(CalendarFrame)
+			end
 		else
 			HideUIPanel(CalendarFrame)
 		end
