@@ -34,6 +34,15 @@ function CalReminder:OnInitialize()
 	if not CalReminderData.defaultValues.lastReasonText then
 		CalReminderData.defaultValues.lastReasonText = {}
 	end
+	if not CalReminderData.defaultValues.lastMessageText then
+		CalReminderData.defaultValues.lastMessageText = {}
+	end
+	if not CalReminderData.defaultValues.lastMessageText["0"] then --Enum.CalendarStatus.Invited
+		CalReminderData.defaultValues.lastMessageText["0"] = {}
+	end
+	if not CalReminderData.defaultValues.lastMessageText["8"] then --Enum.CalendarStatus.Tentative
+		CalReminderData.defaultValues.lastMessageText["8"] = {}
+	end
 	if not CalReminderData.events then
 		CalReminderData.events = {}
 	end
@@ -143,10 +152,9 @@ function setCalReminderData(eventID, data, aValue, player)
 	end
 end
 
-local function GetEventInvites()
-    -- Lists for filtered invites by status
-    local invitedList = {}
-    local tentativeList = {}
+local function GetEventInvites(inviteStatus)
+    -- List for filtered invites by status
+    local invitesList = {}
 
     -- Total number of invites for the current event
     local numInvites = C_Calendar.GetNumInvites()
@@ -158,19 +166,17 @@ local function GetEventInvites()
             local inviteInfo = C_Calendar.EventGetInvite(i)
             
             if inviteInfo then
-                local inviteStatus = inviteInfo.inviteStatus
+                local currentInviteStatus = inviteInfo.inviteStatus
 
                 -- Check if the status is "Invited" or "Tentative" and add to respective list
-                if inviteStatus == Enum.CalendarStatus.Invited then
-                    table.insert(invitedList, inviteInfo)
-                elseif inviteStatus == Enum.CalendarStatus.Tentative then
-                    table.insert(tentativeList, inviteInfo)
+                if currentInviteStatus == inviteStatus then
+                    table.insert(invitesList, inviteInfo)
                 end
             end
         end
     end
 
-    return invitedList, tentativeList
+    return invitesList
 end
 
 -- Create a table of options with predefined text for the dropdown menu
@@ -192,66 +198,114 @@ local reasonsDropdownOptionsOrder = {
     "Reason6"
 }
 
+-- Create the popup dialog
+StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
+	text = L["CALREMINDER_TENTATIVE_REASON_DIALOG"],
+	button1 = SUBMIT,
+	hasEditBox = true, -- Enable the text input box
+	timeout = 0, -- Don't auto-close the popup
+	whileDead = true, -- Allow popup even when the player is dead
+	hideOnEscape = true, -- Hide when escape is pressed
+	OnAccept = function(self, data)
+		-- Get the reason from the text box
+		local reasonText = self.editBox:GetText()
+		local reasonID = getCalReminderData(data.eventID, "reason", data.player)
+		local reason = reasonID and reasonsDropdownOptions[reasonID]
+		if reasonText == reason then
+			reasonText = nil
+		else
+			CalReminderData.defaultValues.lastReasonText[reasonID] = reasonText
+		end
+		setCalReminderData(data.eventID, "reasonText", reasonText, data.player)
+		CalReminder_shareDataWithInvitees()
+	end,
+	EditBoxOnTextChanged = function(self)
+		-- Enable or disable the "Submit" button based on text input
+		local reason = self:GetText()
+
+		-- Only enable the "Submit" button if there is text in the edit box
+		if reason and reason ~= "" then
+			self:GetParent().button1:Enable()  -- Enable the "Submit" button
+		else
+			self:GetParent().button1:Disable() -- Disable the "Submit" button
+		end
+	end,
+	OnShow = function(self, data)
+		-- Initially disable the "Submit" button until there is input
+		self.button1:Disable()
+
+		-- Resize the editBox to make it larger
+		self.editBox:SetWidth(200)  -- Adjust width of the editBox
+
+		local reasonID = getCalReminderData(data.eventID, "reason", data.player)
+		local reason = reasonID and reasonsDropdownOptions[reasonID]
+		local reasonText = getCalReminderData(data.eventID, "reasonText", data.player)
+		local lastReasonText = CalReminderData.defaultValues.lastReasonText[reasonID]
+		self.editBox:SetText(reasonText or lastReasonText or reason or "")
+		self.editBox:SetFocus()
+		self.editBox:HighlightText()
+	end,
+}
+
+-- Create the popup dialog
+StaticPopupDialogs["CALREMINDER_CALLTOARMS_DIALOG"] = {
+	text = L["CALREMINDER_CALLTOARMS_DIALOG"],
+	button1 = SUBMIT,
+	button2 = CANCEL,
+	hasEditBox = true, -- Enable the text input box
+	timeout = 0, -- Don't auto-close the popup
+	whileDead = true, -- Allow popup even when the player is dead
+	hideOnEscape = true, -- Hide when escape is pressed
+	OnAccept = function(self, data)
+		-- Get the reason from the text box
+		local messageText = self.editBox:GetText()
+		if messageText and messageText ~= "" then
+			CalReminderData.defaultValues.lastMessageText[data.status] = messageText
+			
+			-- Send message to Invitees
+			for _, inviteInfo in ipairs(data.list) do
+				local fullName = CalReminder_addRealm(inviteInfo.name)
+				if not CalReminder_isPlayerCharacter(fullName) then
+					SendChatMessage(messageText, "WHISPER", nil, fullName)
+				end
+			end
+		end
+	end,
+	EditBoxOnTextChanged = function(self)
+		-- Enable or disable the "Submit" button based on text input
+		local messageText = self:GetText()
+
+		-- Only enable the "Submit" button if there is text in the edit box
+		if messageText and messageText ~= "" then
+			self:GetParent().button1:Enable()  -- Enable the "Submit" button
+		else
+			self:GetParent().button1:Disable() -- Disable the "Submit" button
+		end
+	end,
+	OnShow = function(self, data)
+		-- Initially disable the "Submit" button until there is input
+		self.button1:Disable()
+
+		-- Resize the editBox to make it larger
+		self.editBox:SetWidth(200)  -- Adjust width of the editBox
+
+		local lastReasonText = CalReminderData.defaultValues.lastMessageText[data.status]
+		self.editBox:SetText(lastReasonText or "")
+		self.editBox:SetFocus()
+		self.editBox:HighlightText()
+	end,
+}
+
 -- Function to create and show the popup with dropdown and text input
 local function ShowReasonPopup(eventID, player)
-    -- Create the popup dialog
-    StaticPopupDialogs["TENTATIVE_REASON"] = {
-        text = "Please select a reason and provide additional details:",
-        button1 = SUBMIT,
-        hasEditBox = true, -- Enable the text input box
-        timeout = 0, -- Don't auto-close the popup
-        whileDead = true, -- Allow popup even when the player is dead
-        hideOnEscape = true, -- Hide when escape is pressed
-        OnAccept = function(self)
-			-- Get the reason from the text box
-			local reasonText = self.editBox:GetText()
-			local reasonID = getCalReminderData(eventID, "reason", player)
-			local reason = reasonID and reasonsDropdownOptions[reasonID]
-			if reasonText == reason then
-				reasonText = nil
-			else
-				CalReminderData.defaultValues.lastReasonText[reasonID] = reasonText
-			end
-			setCalReminderData(eventID, "reasonText", reasonText, player)
-			CalReminder_shareDataWithInvitees()
-        end,
-        EditBoxOnTextChanged = function(self)
-            -- Enable or disable the "Submit" button based on text input
-            local reason = self:GetText()
-
-            -- Only enable the "Submit" button if there is text in the edit box
-            if reason and reason ~= "" then
-                self:GetParent().button1:Enable()  -- Enable the "Submit" button
-            else
-                self:GetParent().button1:Disable() -- Disable the "Submit" button
-            end
-        end,
-        OnShow = function(self)
-            -- Initially disable the "Submit" button until there is input
-            self.button1:Disable()
-
-            -- Resize the editBox to make it larger
-            self.editBox:SetWidth(200)  -- Adjust width of the editBox
-
-			-- Set default selected value and fill editBox with default text
-			local currentEventInfo = C_Calendar.GetEventIndex()
-			local eventID
-			if currentEventInfo then
-				local eventInfo = C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
-				eventID = eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
-			end
-			local reasonID = getCalReminderData(eventID, "reason", player)
-			local reason = reasonID and reasonsDropdownOptions[reasonID]
-			local reasonText = getCalReminderData(eventID, "reasonText", player)
-			local lastReasonText = CalReminderData.defaultValues.lastReasonText[reasonID]
-			self.editBox:SetText(reasonText or lastReasonText or reason or "")
-			self.editBox:SetFocus()
-			self.editBox:HighlightText()
-        end,
-    }
-
     -- Show the popup dialog
-    StaticPopup_Show("TENTATIVE_REASON")
+	local data = {}
+	data["eventID"] = eventID
+	data["player"] = player
+    local dialog = StaticPopup_Show("CALREMINDER_TENTATIVE_REASON_DIALOG", nil, nil, data)
+	if (dialog) then
+		dialog.data = data
+	end
 end
 
 -- Function to show the dropdown when the button is clicked
@@ -279,6 +333,49 @@ local function ShowTentativeDropdown(player)
     
     -- Show the dropdown near the button
     ToggleDropDownMenu(1, nil, dropdown, "CalendarViewEventTentativeButton", 0, 0)
+end
+
+-- Create the dropdown frame
+local dropdown = CreateFrame("Frame", "CallToArmsDropdownMenu", UIParent, "UIDropDownMenuTemplate")
+-- Initialize the dropdown
+UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
+	local info = UIDropDownMenu_CreateInfo()
+	info.notCheckable = 1
+	info.text = YELLOW_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_INVITED.."|r"
+	info.value = CALENDAR_STATUS_INVITED
+	info.func = function()
+		local data = {}
+		data.status = tostring(Enum.CalendarStatus.Invited)
+		data.statusLabel = CALENDAR_STATUS_INVITED
+		data.list = GetEventInvites(Enum.CalendarStatus.Invited)
+		local dialog = StaticPopup_Show("CALREMINDER_CALLTOARMS_DIALOG", YELLOW_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_INVITED.."|r", nil, data)
+		if dialog then
+			dialog.data = data
+		end
+	end
+	UIDropDownMenu_AddButton(info, level)
+	
+	info = UIDropDownMenu_CreateInfo()
+	info.notCheckable = 1
+	info.text = ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r"
+	info.value = CALENDAR_STATUS_TENTATIVE
+	info.func = function()
+		local data = {}
+		data.status = tostring(Enum.CalendarStatus.Tentative)
+		data.statusLabel = CALENDAR_STATUS_TENTATIVE
+		data.list = GetEventInvites(Enum.CalendarStatus.Tentative)
+		local dialog = StaticPopup_Show("CALREMINDER_CALLTOARMS_DIALOG", ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r", nil, data)
+		if dialog then
+			dialog.data = data
+		end
+	end
+	UIDropDownMenu_AddButton(info, level)
+end, "MENU")
+    
+-- Function to show the dropdown when the button is clicked
+local function ShowCallToArmsDropdown()
+	-- Show the dropdown near the button
+	ToggleDropDownMenu(1, nil, dropdown, "CR_MassProcessButton", 0, 0)
 end
 
 function CalReminder:SaveEventData()
@@ -390,23 +487,12 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 
 		-- Fonctionnalité du bouton (ce que fait ton bouton quand on clique dessus)
 		myButton:SetScript("OnClick", function(self)
-			-- Example usage: retrieve the two lists for Invited and Tentative statuses
-			local invitedList, tentativeList = GetEventInvites()
-
-			-- Display the results for Invited
-			print(CALENDAR_STATUS_INVITED..":")
-			for _, inviteInfo in ipairs(invitedList) do
-				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
-				SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
-			end
-
-			-- Display the results for Tentative
-			print(CALENDAR_STATUS_TENTATIVE..":")
-			for _, inviteInfo in ipairs(tentativeList) do
-				print(string.format("Invite: %s (%s) - Status: %d", inviteInfo.guid, inviteInfo.className, inviteInfo.inviteStatus))
-				SendChatMessage("test", "WHISPER", nil, CalReminder_addRealm(invite.name))
-			end
+			ShowCallToArmsDropdown()
 		end)
+		myButton:SetAttribute("tooltip", BATTLEGROUND_HOLIDAY)
+		myButton:SetAttribute("tooltipDetail", { L["CALREMINDER_CALLTOARMS_TOOLTIP_DETAILS"] })
+		myButton:SetScript("OnEnter", CalReminderButton_OnEnter)
+		myButton:SetScript("OnLeave", CalReminderButton_OnLeave)
 	end
 end
 
