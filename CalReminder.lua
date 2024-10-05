@@ -37,12 +37,6 @@ function CalReminder:OnInitialize()
 	if not CalReminderData.defaultValues.lastMessageText then
 		CalReminderData.defaultValues.lastMessageText = {}
 	end
-	if not CalReminderData.defaultValues.lastMessageText["0"] then --Enum.CalendarStatus.Invited
-		CalReminderData.defaultValues.lastMessageText["0"] = {}
-	end
-	if not CalReminderData.defaultValues.lastMessageText["8"] then --Enum.CalendarStatus.Tentative
-		CalReminderData.defaultValues.lastMessageText["8"] = {}
-	end
 	if not CalReminderData.events then
 		CalReminderData.events = {}
 	end
@@ -209,7 +203,7 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 	OnAccept = function(self, data)
 		-- Get the reason from the text box
 		local reasonText = self.editBox:GetText()
-		local reasonID = getCalReminderData(data.eventID, "reason", data.player)
+		local reasonID = getCalReminderData(data.eventID, "reason", data.player) or "Reason6"
 		local reason = reasonID and reasonsDropdownOptions[reasonID]
 		if reasonText == reason then
 			reasonText = nil
@@ -289,8 +283,8 @@ StaticPopupDialogs["CALREMINDER_CALLTOARMS_DIALOG"] = {
 		-- Resize the editBox to make it larger
 		self.editBox:SetWidth(200)  -- Adjust width of the editBox
 
-		local lastReasonText = CalReminderData.defaultValues.lastMessageText[data.status]
-		self.editBox:SetText(lastReasonText or "")
+		local lastMessageText = CalReminderData.defaultValues.lastMessageText[data.status]
+		self.editBox:SetText(lastMessageText or "")
 		self.editBox:SetFocus()
 		self.editBox:HighlightText()
 	end,
@@ -389,9 +383,9 @@ function CalReminder:SaveEventData()
 				setCalReminderData(actualEventInfo.eventID, "day",   actualEventInfo.startTime and actualEventInfo.startTime.monthDay)
 				setCalReminderData(actualEventInfo.eventID, "year",  actualEventInfo.startTime and actualEventInfo.startTime.year)
 
-				if actualEventInfo.modStatus == "CREATOR" or actualEventInfo.modStatus == "MODERATOR" then
+				--if actualEventInfo.modStatus == "CREATOR" or actualEventInfo.modStatus == "MODERATOR" then
 					CalReminder_shareDataWithInvitees(true)
-				end
+				--end
 
 				-- Retrieves the event's invitees
 				local numInvites = C_Calendar.GetNumInvites()
@@ -566,6 +560,20 @@ end
 function CalReminder:ReloadData()
 	CalReminder:UnregisterEvent("PLAYER_STARTED_MOVING")
 	CalReminder:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
+
+	local calendarIsShown = CalendarFrame and CalendarFrame:IsShown()
+
+	if ( not C_AddOns.IsAddOnLoaded("Blizzard_Calendar") ) then
+		UIParentLoadAddOn("Blizzard_Calendar")
+	end
+	if ( Calendar_Toggle ) then
+		Calendar_Toggle()
+		if calendarIsShown then
+			ShowUIPanel(CalendarFrame)
+		else
+			HideUIPanel(CalendarFrame)
+		end
+	end
 
 	CalReminder_browseEvents()
 	CalReminder_shareDataWithInvitees()
