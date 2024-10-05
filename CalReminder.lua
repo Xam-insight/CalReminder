@@ -308,37 +308,38 @@ local function ShowReasonPopup(eventID, player)
 	end
 end
 
--- Function to show the dropdown when the button is clicked
-local function ShowTentativeDropdown(player)
-    -- Create the dropdown frame
-    local dropdown = CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate")
-    -- Initialize the dropdown
-    UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
-        for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
-            local info = UIDropDownMenu_CreateInfo()
-			info.notCheckable = 1
-            info.text = reasonsDropdownOptions[optionValue]
-            info.value = optionValue
-            info.func = function()
-				CalendarViewEventTentativeButton_OnClick(self)
-				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
-				if eventID then
-					setCalReminderData(eventID, "reason", optionValue, player)
-					ShowReasonPopup(eventID, player)
-				end
-            end
-            UIDropDownMenu_AddButton(info, level)
-        end
-    end, "MENU")
+-- Create the dropdown frame
+CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate")
+-- Initialize the dropdown
+UIDropDownMenu_Initialize(TentativeDropdownMenu, function(self, level, menuList)
+	for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
+		local info = UIDropDownMenu_CreateInfo()
+		info.notCheckable = 1
+		info.text = reasonsDropdownOptions[optionValue]
+		info.value = optionValue
+		info.func = function()
+			CalendarViewEventTentativeButton_OnClick(self)
+			local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
+			if eventID then
+				local player = UnitGUID("player")
+				setCalReminderData(eventID, "reason", optionValue, player)
+				ShowReasonPopup(eventID, player)
+			end
+		end
+		UIDropDownMenu_AddButton(info, level)
+	end
+end, "MENU")
     
+-- Function to show the dropdown when the button is clicked
+local function ShowTentativeDropdown()
     -- Show the dropdown near the button
-    ToggleDropDownMenu(1, nil, dropdown, "CalendarViewEventTentativeButton", 0, 0)
+    ToggleDropDownMenu(1, nil, TentativeDropdownMenu, "CalendarViewEventTentativeButton", 0, 0)
 end
 
 -- Create the dropdown frame
-local dropdown = CreateFrame("Frame", "CallToArmsDropdownMenu", UIParent, "UIDropDownMenuTemplate")
+CreateFrame("Frame", "CallToArmsDropdownMenu", UIParent, "UIDropDownMenuTemplate")
 -- Initialize the dropdown
-UIDropDownMenu_Initialize(dropdown, function(self, level, menuList)
+UIDropDownMenu_Initialize(CallToArmsDropdownMenu, function(self, level, menuList)
 	local info = UIDropDownMenu_CreateInfo()
 	info.notCheckable = 1
 	info.text = YELLOW_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_INVITED.."|r"
@@ -375,7 +376,7 @@ end, "MENU")
 -- Function to show the dropdown when the button is clicked
 local function ShowCallToArmsDropdown()
 	-- Show the dropdown near the button
-	ToggleDropDownMenu(1, nil, dropdown, "CR_MassProcessButton", 0, 0)
+	ToggleDropDownMenu(1, nil, CallToArmsDropdownMenu, "CR_MassProcessButton", 0, 0)
 end
 
 function CalReminder:SaveEventData()
@@ -477,7 +478,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 
 		-- Hook into the button's OnClick event
 		CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
-			ShowTentativeDropdown(UnitGUID("player"))  -- Show the dropdown when the button is clicked
+			ShowTentativeDropdown()  -- Show the dropdown when the button is clicked
 		end)
 		
 		local myButton = CreateFrame("Button", "CR_MassProcessButton", CalendarCreateEventFrame, "UIPanelButtonTemplate")
