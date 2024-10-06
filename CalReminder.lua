@@ -422,10 +422,10 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
 					local currentEventId = CalReminder_getCurrentEventId()
 					local reason = getCalReminderData(currentEventId, "reason", inviteInfo.guid)
-					reason = (reason and reasonsDropdownOptions[reason]) or ""
+					reason = (reason and reasonsDropdownOptions[reason]) or nil
 					local reasonText = getCalReminderData(currentEventId, "reasonText", inviteInfo.guid)
 					if reasonText == reason then
-						reasonText = ""
+						reasonText = nil
 					end
 					if reason or reasonText then
 						local responseTime = C_Calendar.EventGetInviteResponseTime(self.inviteIndex)
@@ -433,7 +433,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 							GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
 							GameTooltip:AddLine(LFG_LIST_DETAILS)
 						end
-						GameTooltip:AddLine(L["CALREMINDER_TENTATIVE_REASON"]..reason, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
+						GameTooltip:AddLine(L["CALREMINDER_TENTATIVE_REASON"]..(reason or ""), ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
 						GameTooltip:AddLine(reasonText, ORANGE_FONT_COLOR.r, ORANGE_FONT_COLOR.g, ORANGE_FONT_COLOR.b)
 						GameTooltip:Show()
 					end
