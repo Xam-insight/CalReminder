@@ -94,6 +94,9 @@ local function CalReminder_getCurrentEventId(isContextMenu)
 end
 
 function getCalReminderData(eventID, data, player)
+	local value = nil
+	local dataTime = nil
+
 	if not data then
 		return nil
 	end
@@ -103,7 +106,7 @@ function getCalReminderData(eventID, data, player)
 			return nil
 		end
 	end
-	local value = CalReminderData and CalReminderData.events and CalReminderData.events[eventID]
+	value = CalReminderData and CalReminderData.events and CalReminderData.events[eventID]
 		and ( (player and CalReminderData.events[eventID].players and CalReminderData.events[eventID].players[player] and CalReminderData.events[eventID].players[player][data])
 			or (CalReminderData.events[eventID].infos and CalReminderData.events[eventID].infos[data]) )
 	if value ~= nil then
@@ -202,6 +205,7 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 	text = L["CALREMINDER_TENTATIVE_REASON_DIALOG"],
 	button1 = SUBMIT,
 	hasEditBox = true, -- Enable the text input box
+	maxLetters = 40,  -- Limit input to 40 characters
 	timeout = 0, -- Don't auto-close the popup
 	whileDead = true, -- Allow popup even when the player is dead
 	hideOnEscape = true, -- Hide when escape is pressed
@@ -453,7 +457,6 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 		hooksecurefunc(C_Calendar, "ContextMenuEventRemove", function()
 			-- Get the event that is currently open
 			local eventID = CalReminder_getCurrentEventId(true)
-			DevTools_Dump(eventID)
 			if eventID then
 				CalReminderData.events[eventID] = {}
 				CalReminderData.events[eventID].deleted = true
