@@ -453,6 +453,12 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 			end
 		end)
 		
+		-- Hook the function that updates calendar invite status
+		hooksecurefunc(C_Calendar, "ContextMenuInviteTentative", function()
+			-- Show the popup to ask for the reason
+			ShowReasonPopup(CalReminder_getCurrentEventId(true), UnitGUID("player"))
+		end)
+		
 		-- Hook into the event deletion function
 		hooksecurefunc(C_Calendar, "ContextMenuEventRemove", function()
 			-- Get the event that is currently open
