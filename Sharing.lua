@@ -16,7 +16,7 @@ local function CalReminder_filterCalReminderData()
 	local dataToSend = {}
 	dataToSend["version"] = C_AddOns.GetAddOnMetadata("CalReminder", "Version")
 	for event, eventData in pairs(CalReminderData.events) do
-		if not eventData.obsolete then
+		if not eventData.obsolete and not eventData.deleted then
 			dataToSend[event] = {}
 			for player, playerData in pairs(eventData.players) do
 				local playerStatus = getCalReminderData(event, "status", player)
@@ -97,24 +97,34 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 			else
 				local fixedObsoleteSentValues = {}
 				for eventID, eventData in pairs(o) do
-					for player, playerData in pairs(eventData) do
-						for data, value in pairs(playerData) do
-							local actualValue, actualValueTime = getCalReminderData(eventID, data, player)
-							local newValue, newValueTime = strsplit("|", value, 2)
-							if newValue == "nil" then
-								newValue = nil
-							end
-							if actualValue ~= newValue then
-								if not actualValueTime or (newValueTime and newValueTime > actualValueTime) then
-									setCalReminderData(eventID, data, newValue, player)
-								else
-									if not fixedObsoleteSentValues[eventID] then
-										fixedObsoleteSentValues[eventID] = {}
+					if CalReminderData.events[eventID].deleted then
+						if not fixedObsoleteSentValues[eventID] then
+							fixedObsoleteSentValues[eventID] = {}
+						end
+						fixedObsoleteSentValues[eventID].deleted = true
+					elseif eventData.deleted then
+						CalReminderData.events[eventID] = {}
+						CalReminderData.events[eventID].deleted = true
+					else
+						for player, playerData in pairs(eventData) do
+							for data, value in pairs(playerData) do
+								local actualValue, actualValueTime = getCalReminderData(eventID, data, player)
+								local newValue, newValueTime = strsplit("|", value, 2)
+								if newValue == "nil" then
+									newValue = nil
+								end
+								if actualValue ~= newValue then
+									if not actualValueTime or (newValueTime and newValueTime > actualValueTime) then
+										setCalReminderData(eventID, data, newValue, player)
+									else
+										if not fixedObsoleteSentValues[eventID] then
+											fixedObsoleteSentValues[eventID] = {}
+										end
+										if not fixedObsoleteSentValues[eventID] then
+											fixedObsoleteSentValues[eventID] = {}
+										end
+										fixedObsoleteSentValues[eventID][player] = CalReminderData.events[eventID].players[player]
 									end
-									if not fixedObsoleteSentValues[eventID] then
-										fixedObsoleteSentValues[eventID] = {}
-									end
-									fixedObsoleteSentValues[eventID][player] = CalReminderData.events[eventID].players[player]
 								end
 							end
 						end

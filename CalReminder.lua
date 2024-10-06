@@ -82,8 +82,13 @@ function CalReminder_OpenOptions()
 end
 
 -- Function to retrieve the current event's unique ID
-local function CalReminder_getCurrentEventId()
-	local currentEventInfo = C_Calendar.GetEventIndex()
+local function CalReminder_getCurrentEventId(isContextMenu)
+	local currentEventInfo
+	if isContextMenu then
+		currentEventInfo = C_Calendar.ContextMenuGetEventIndex()
+	else
+		currentEventInfo = C_Calendar.GetEventIndex()
+	end
 	local eventInfo = currentEventInfo and C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
 	return eventInfo and eventInfo.eventID  -- Retrieve the event's unique ID
 end
@@ -441,6 +446,17 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				if inviteInfo then
 					ShowReasonPopup(CalReminder_getCurrentEventId(), inviteInfo.guid)
 				end
+			end
+		end)
+		
+		-- Hook into the event deletion function
+		hooksecurefunc(C_Calendar, "ContextMenuEventRemove", function()
+			-- Get the event that is currently open
+			local eventID = CalReminder_getCurrentEventId(true)
+			DevTools_Dump(eventID)
+			if eventID then
+				CalReminderData.events[eventID] = {}
+				CalReminderData.events[eventID].deleted = true
 			end
 		end)
 		
