@@ -208,14 +208,17 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 	OnAccept = function(self, data)
 		-- Get the reason from the text box
 		local reasonText = self.editBox:GetText()
-		local reasonID = getCalReminderData(data.eventID, "reason", data.player) or "Reason6"
-		local reason = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reasonLabel
+		local reasonID = getCalReminderData(data.eventID, "reason", data.player)
+		local reason = reasonsDropdownOptions[reasonID or "Reason6"] and reasonsDropdownOptions[reasonID or "Reason6"].reasonLabel
 		if reasonText == reason then
 			reasonText = nil
 		else
-			CalReminderData.defaultValues.lastReasonText[reasonID] = reasonText
+			CalReminderData.defaultValues.lastReasonText[reasonID or "Reason6"] = reasonText
 		end
 		setCalReminderData(data.eventID, "reasonText", reasonText, data.player)
+		if not reasonID then
+			setCalReminderData(data.eventID, "reason", "Reason6", data.player)
+		end
 		CalReminder_shareDataWithInvitees()
 	end,
 	EditBoxOnTextChanged = function(self)
@@ -468,31 +471,53 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 			end
 		end)
 		
-		Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription, contextData)
+		local function createCalReminderSubMenu(rootDescription, inviteInfo, inviteIndex)
+			if inviteInfo and inviteInfo.eventID and inviteInfo.guid then
+				rootDescription:CreateTitle("CalReminder")
+				local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
+				local targetPlayer = inviteInfo.guid
+				for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
+					local texture = "" -- 130750
+					if tostring(optionValue) == getCalReminderData(inviteInfo.eventID, "reason", targetPlayer) then
+						texture = 130751
+					end
+					submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].reasonLabel.."|r", function()
+						if inviteIndex then
+							C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
+						else
+							C_Calendar.ContextMenuInviteTentative()
+						end
+						
+						setCalReminderData(inviteInfo.eventID, "reason", optionValue, targetPlayer)
+						ShowReasonPopup(inviteInfo.eventID, targetPlayer)
+					end)
+				end
+			end
+		end
+		
+		Menu.ModifyMenu("MENU_CALENDAR_CREATE_INVITE", function(ownerRegion, rootDescription)
 			-- Append a new section to the end of the menu.
 			local inviteIndex = ownerRegion and ownerRegion.inviteIndex
 			local inviteInfo = C_Calendar.EventGetInvite(inviteIndex)
-			if not inviteInfo or inviteInfo.modStatus ~= "CREATOR" then
-				rootDescription:QueueDivider()
-			end
-			rootDescription:CreateTitle("CalReminder")
-			local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
-			local targetPlayer = inviteInfo.guid
-			for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
-				local texture = "" -- 130750
-				if tostring(optionValue) == getCalReminderData(inviteInfo and inviteInfo.eventID, "reason", targetPlayer) then
-					texture = 130751
+			if inviteInfo then
+				if inviteInfo.modStatus ~= "CREATOR" then
+					rootDescription:QueueDivider()
 				end
-				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].reasonLabel.."|r", function()
-					C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
-					
-					if inviteInfo then
-						setCalReminderData(inviteInfo.eventID, "reason", optionValue, targetPlayer)
-						ShowReasonPopup(inviteInfo.eventID, targetPlayer)
-					end
-				end)
+				inviteInfo.eventID = CalReminder_getCurrentEventId()
+				createCalReminderSubMenu(rootDescription, inviteInfo, inviteIndex)
 			end
 		end)
+		
+		Menu.ModifyMenu("MENU_CALENDAR_DAY", function(ownerRegion, rootDescription)
+			if ownerRegion then
+				local inviteInfo = {}
+				inviteInfo.eventID = CalReminder_getCurrentEventId(true)
+				inviteInfo.guid = UnitGUID("player")
+				rootDescription:QueueDivider()
+				createCalReminderSubMenu(rootDescription, inviteInfo, inviteIndex)
+			end
+		end)
+		
 
 		-- Hook into the button's OnClick event
 		CalendarViewEventTentativeButton:SetScript("OnClick", function(self)
