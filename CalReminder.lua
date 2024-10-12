@@ -183,12 +183,12 @@ end
 
 -- Create a table of options with predefined text for the dropdown menu
 local reasonsDropdownOptions = {
-    ["Reason1"] = L["CALREMINDER_TENTATIVE_REASON1"],
-    ["Reason2"] = L["CALREMINDER_TENTATIVE_REASON2"],
-    ["Reason3"] = L["CALREMINDER_TENTATIVE_REASON3"],
-    ["Reason4"] = L["CALREMINDER_TENTATIVE_REASON4"],
-    ["Reason5"] = L["CALREMINDER_TENTATIVE_REASON5"],
-    ["Reason6"] = L["CALREMINDER_TENTATIVE_REASON6"]
+    ["Reason1"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON1"], ["reminder"] = 0              }, -- "Slight delay"
+    ["Reason2"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON2"], ["reminder"] = 0              }, -- "Significant delay"
+    ["Reason3"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON3"], ["reminder"] = maxDaysToCheck }, -- "Not sure if I'll make it"
+    ["Reason4"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON4"]                                }, -- "Not high enough level"
+    ["Reason5"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON5"]                                }, -- "Leaving early"
+    ["Reason6"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON6"]                                }  -- "Other (please specify)"
 }
 
 local reasonsDropdownOptionsOrder = {
@@ -213,7 +213,7 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 		-- Get the reason from the text box
 		local reasonText = self.editBox:GetText()
 		local reasonID = getCalReminderData(data.eventID, "reason", data.player) or "Reason6"
-		local reason = reasonID and reasonsDropdownOptions[reasonID]
+		local reason = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reasonLabel
 		if reasonText == reason then
 			reasonText = nil
 		else
@@ -233,6 +233,9 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 			self:GetParent().button1:Disable() -- Disable the "Submit" button
 		end
 	end,
+	EditBoxOnEnterPressed = function(self)
+        self:GetParent().button1:Click()
+    end,
 	OnShow = function(self, data)
 		-- Initially disable the "Submit" button until there is input
 		self.button1:Disable()
@@ -241,9 +244,9 @@ StaticPopupDialogs["CALREMINDER_TENTATIVE_REASON_DIALOG"] = {
 		self.editBox:SetWidth(200)  -- Adjust width of the editBox
 
 		local reasonID = getCalReminderData(data.eventID, "reason", data.player)
-		local reason = reasonID and reasonsDropdownOptions[reasonID]
+		local reason = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reasonLabel
 		local reasonText = getCalReminderData(data.eventID, "reasonText", data.player)
-		local lastReasonText = CalReminderData.defaultValues.lastReasonText[reasonID]
+		local lastReasonText = reasonID and CalReminderData.defaultValues.lastReasonText[reasonID]
 		self.editBox:SetText(reasonText or lastReasonText or reason or "")
 		self.editBox:SetFocus()
 		self.editBox:HighlightText()
@@ -318,7 +321,7 @@ UIDropDownMenu_Initialize(TentativeDropdownMenu, function(self, level, menuList)
 	for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
 		local info = UIDropDownMenu_CreateInfo()
 		info.notCheckable = 1
-		info.text = reasonsDropdownOptions[optionValue]
+		info.text = reasonsDropdownOptions[optionValue].reasonLabel
 		info.value = optionValue
 		info.func = function()
 			CalendarViewEventTentativeButton_OnClick(self)
@@ -422,7 +425,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
 					local currentEventId = CalReminder_getCurrentEventId()
 					local reason = getCalReminderData(currentEventId, "reason", inviteInfo.guid)
-					reason = (reason and reasonsDropdownOptions[reason]) or nil
+					reason = (reason and reasonsDropdownOptions[reason] and reasonsDropdownOptions[reason].reasonLabel) or nil
 					local reasonText = getCalReminderData(currentEventId, "reasonText", inviteInfo.guid)
 					if reasonText == reason then
 						reasonText = nil
@@ -484,7 +487,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				if tostring(optionValue) == getCalReminderData(inviteInfo and inviteInfo.eventID, "reason", targetPlayer) then
 					texture = 130751
 				end
-				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].."|r", function()
+				submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].reasonLabel.."|r", function()
 					C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
 					
 					if inviteInfo then
@@ -548,17 +551,35 @@ function CalReminder_browseEvents()
 							if not firstPendingEvent 
 									and (event.inviteStatus == Enum.CalendarStatus.Invited
 										or event.inviteStatus == Enum.CalendarStatus.Tentative) then
-								--need response
-								firstEvent = event
-								if dayLoopId == curDay then
-									firstEventIsToday = true
-								elseif dayLoopId == curDay + 1 then
-									firstEventIsTomorrow = true
+								local eventFound = true
+								if event.inviteStatus == Enum.CalendarStatus.Tentative then
+									local eventInfo = C_Calendar.GetDayEvent(monthOffsetLoopId, dayLoopId, loopId)
+									local reasonID = eventInfo.eventID and getCalReminderData(eventInfo.eventID, "reason", UnitGUID("player"))
+									local reminder = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reminder
+									if reasonID and reasonsDropdownOptions[reasonID] then
+										if reminder then
+											print(dayLoopId, reminder, curDay, dayLoopId - reminder <= curDay)
+											if dayLoopId - reminder <= curDay then
+												eventFound = false
+											end
+										else
+											eventFound = false
+										end
+									end
 								end
-								firstEventMonthOffset = monthOffsetLoopId
-								firstEventDay = dayLoopId
-								firstEventId = loopId
-								firstPendingEvent = true
+								if eventFound then
+									--need response
+									firstEvent = event
+									if dayLoopId == curDay then
+										firstEventIsToday = true
+									elseif dayLoopId == curDay + 1 then
+										firstEventIsTomorrow = true
+									end
+									firstEventMonthOffset = monthOffsetLoopId
+									firstEventDay = dayLoopId
+									firstEventId = loopId
+									firstPendingEvent = true
+								end
 							end
 						end
 					end
