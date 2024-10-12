@@ -184,7 +184,8 @@ local reasonsDropdownOptions = {
     ["Reason3"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON3"], ["reminder"] = 2 }, -- "Not sure if I'll make it"
     ["Reason4"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON4"]                   }, -- "Not high enough level"
     ["Reason5"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON5"]                   }, -- "Leaving early"
-    ["Reason6"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON6"]                   }  -- "Other (please specify)"
+    ["Reason6"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON6"]                   }, -- "Other (please specify)"
+    ["Reason7"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON7"], ["reminder"] = 2 }, -- "Remark"
 }
 
 local reasonsDropdownOptionsOrder = {
@@ -193,7 +194,8 @@ local reasonsDropdownOptionsOrder = {
     "Reason3",
     "Reason4",
     "Reason5",
-    "Reason6"
+    "Reason6",
+    "Reason7",
 }
 
 -- Create the popup dialog
@@ -318,20 +320,22 @@ CreateFrame("Frame", "TentativeDropdownMenu", UIParent, "UIDropDownMenuTemplate"
 -- Initialize the dropdown
 UIDropDownMenu_Initialize(TentativeDropdownMenu, function(self, level, menuList)
 	for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
-		local info = UIDropDownMenu_CreateInfo()
-		info.notCheckable = 1
-		info.text = reasonsDropdownOptions[optionValue].reasonLabel
-		info.value = optionValue
-		info.func = function()
-			CalendarViewEventTentativeButton_OnClick(self)
-			local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
-			if eventID then
-				local player = UnitGUID("player")
-				setCalReminderData(eventID, "reason", optionValue, player)
-				ShowReasonPopup(eventID, player)
+		if optionValue ~= "Reason7" then
+			local info = UIDropDownMenu_CreateInfo()
+			info.notCheckable = 1
+			info.text = reasonsDropdownOptions[optionValue].reasonLabel
+			info.value = optionValue
+			info.func = function()
+				CalendarViewEventTentativeButton_OnClick(self)
+				local eventID = CalReminder_getCurrentEventId() -- Retrieve the event's unique ID
+				if eventID then
+					local player = UnitGUID("player")
+					setCalReminderData(eventID, "reason", optionValue, player)
+					ShowReasonPopup(eventID, player)
+				end
 			end
+			UIDropDownMenu_AddButton(info, level)
 		end
-		UIDropDownMenu_AddButton(info, level)
 	end
 end, "MENU")
     
@@ -477,20 +481,22 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 				local submenu = rootDescription:CreateButton(ORANGE_FONT_COLOR:GenerateHexColorMarkup()..CALENDAR_STATUS_TENTATIVE.."|r")
 				local targetPlayer = inviteInfo.guid
 				for _, optionValue in ipairs(reasonsDropdownOptionsOrder) do
-					local texture = "" -- 130750
-					if tostring(optionValue) == getCalReminderData(inviteInfo.eventID, "reason", targetPlayer) then
-						texture = 130751
-					end
-					submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].reasonLabel.."|r", function()
-						if inviteIndex then
-							C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
-						else
-							C_Calendar.ContextMenuInviteTentative()
+					if optionValue ~= "Reason7" or targetPlayer ~= UnitGUID("player") then
+						local texture = "" -- 130750
+						if tostring(optionValue) == getCalReminderData(inviteInfo.eventID, "reason", targetPlayer) then
+							texture = 130751
 						end
-						
-						setCalReminderData(inviteInfo.eventID, "reason", optionValue, targetPlayer)
-						ShowReasonPopup(inviteInfo.eventID, targetPlayer)
-					end)
+						submenu:CreateButton("|T"..texture..":16:16:0:0|t "..ORANGE_FONT_COLOR:GenerateHexColorMarkup()..reasonsDropdownOptions[optionValue].reasonLabel.."|r", function()
+							if inviteIndex then
+								C_Calendar.EventSetInviteStatus(inviteIndex, Enum.CalendarStatus.Tentative)
+							else
+								C_Calendar.ContextMenuInviteTentative()
+							end
+							
+							setCalReminderData(inviteInfo.eventID, "reason", optionValue, targetPlayer)
+							ShowReasonPopup(inviteInfo.eventID, targetPlayer)
+						end)
+					end
 				end
 			end
 		end

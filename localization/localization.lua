@@ -31,5 +31,6 @@ L["CALREMINDER_TENTATIVE_REASON3"] = "Not sure if I'll make it"
 L["CALREMINDER_TENTATIVE_REASON4"] = "Not high enough level"
 L["CALREMINDER_TENTATIVE_REASON5"] = "Leaving early"
 L["CALREMINDER_TENTATIVE_REASON6"] = "Other (please specify)"
+L["CALREMINDER_TENTATIVE_REASON7"] = "Need for clarification from player"
 
 end
