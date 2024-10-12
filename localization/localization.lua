@@ -18,6 +18,8 @@ L["CALREMINDER_OPTIONS_NPC_DESC"] = "Choose the %s NPC who will remind you impen
 L["CALREMINDER_OPTIONS_QUOTES"] = "Enable Quotes"
 L["CALREMINDER_OPTIONS_QUOTES_DESC"] = "Enables / disables NPC Quotes"
 
+L["CALREMINDER_OPTIONS_DELAY"] = "Number of Days to check in the calendar"
+
 L["CALREMINDER_CALLTOARMS_TOOLTIP_DETAILS"] = "Send messages to connected invitees."
 L["CALREMINDER_CALLTOARMS_DIALOG"] = "Message to send to connected '%s' players:"
 

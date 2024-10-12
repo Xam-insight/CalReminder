@@ -17,12 +17,8 @@ function CalReminder:OnInitialize()
 	-- Called when the addon is loaded
 	self:RegisterComm(CalReminderGlobal_CommPrefix, "ReceiveData")
 	
-	if not maxDaysToCheck then
-		maxDaysToCheck = 31
-	elseif maxDaysToCheck < 2 then
-		maxDaysToCheck = 2
-	elseif maxDaysToCheck > 62 then
-		maxDaysToCheck = 62
+	if not CalReminderOptionsData.delay then
+		CalReminderOptionsData.delay = 7
 	end
 	
 	if not CalReminderData then
@@ -183,12 +179,12 @@ end
 
 -- Create a table of options with predefined text for the dropdown menu
 local reasonsDropdownOptions = {
-    ["Reason1"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON1"], ["reminder"] = 0              }, -- "Slight delay"
-    ["Reason2"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON2"], ["reminder"] = 0              }, -- "Significant delay"
-    ["Reason3"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON3"], ["reminder"] = maxDaysToCheck }, -- "Not sure if I'll make it"
-    ["Reason4"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON4"]                                }, -- "Not high enough level"
-    ["Reason5"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON5"]                                }, -- "Leaving early"
-    ["Reason6"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON6"]                                }  -- "Other (please specify)"
+    ["Reason1"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON1"], ["reminder"] = 0 }, -- "Slight delay"
+    ["Reason2"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON2"], ["reminder"] = 0 }, -- "Significant delay"
+    ["Reason3"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON3"], ["reminder"] = 2 }, -- "Not sure if I'll make it"
+    ["Reason4"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON4"]                   }, -- "Not high enough level"
+    ["Reason5"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON5"]                   }, -- "Leaving early"
+    ["Reason6"] = { ["reasonLabel"] = L["CALREMINDER_TENTATIVE_REASON6"]                   }  -- "Other (please specify)"
 }
 
 local reasonsDropdownOptionsOrder = {
@@ -534,8 +530,8 @@ function CalReminder_browseEvents()
 	local loopId = 1
 	local dayOffsetLoopId = 0
 	firstPendingEvent = false
-	while not firstPendingEvent and dayOffsetLoopId <= maxDaysToCheck do
-		while not firstPendingEvent and dayLoopId <= 31 and dayOffsetLoopId <= maxDaysToCheck do
+	while not firstPendingEvent and dayOffsetLoopId <= CalReminderOptionsData.delay do
+		while not firstPendingEvent and dayLoopId <= 31 and dayOffsetLoopId <= CalReminderOptionsData.delay do
 			local numEvents = C_Calendar.GetNumDayEvents(0, dayLoopId)
 			while not firstPendingEvent and loopId <= numEvents do
 				local event = C_Calendar.GetDayEvent(0, dayLoopId, loopId)
@@ -558,8 +554,7 @@ function CalReminder_browseEvents()
 									local reminder = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reminder
 									if reasonID and reasonsDropdownOptions[reasonID] then
 										if reminder then
-											print(dayLoopId, reminder, curDay, dayLoopId - reminder <= curDay)
-											if dayLoopId - reminder <= curDay then
+											if dayLoopId - reminder > curDay then
 												eventFound = false
 											end
 										else
@@ -654,7 +649,7 @@ function CalReminder:ReloadData()
 		if firstEventIsToday or firstEventIsTomorrow then
 			local message = (firstEventIsToday and L["CALREMINDER_DDAY_REMINDER"]) or L["CALREMINDER_LDAY_REMINDER"]
 			if not CalReminderOptionsData["SoundsDisabled"] then
-				if DeadpoolOptionsData["QuotesDisabled"] or not EZBlizzUiPop_PlayNPCRandomSound(chief, "Dialog", true) then
+				if CalReminderOptionsData["QuotesDisabled"] or not EZBlizzUiPop_PlayNPCRandomSound(chief, "Dialog", true) then
 					EZBlizzUiPop_PlaySound(12867)
 				end
 			end

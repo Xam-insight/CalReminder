@@ -3,6 +3,7 @@
 	- Added: Call to arms function to send messages to uncertain invitees.
 	- Added: Random Talking Heads NPC.
 	- Added: NPC quotes.
+	- Added: Option to set the Number of Days to check in the calendar.
 	- Fixes to calendar options and event display.
 - v1.2.8
 	- TOC for 11.0.2.
