@@ -1,4 +1,5 @@
 ﻿- v1.3.0
+	- TOC for 11.0.5.
 	- Added: Saving and sharing tentative status reason.
 	- Added: Call to arms function to send messages to uncertain invitees.
 	- Added: Random Talking Heads NPC.
