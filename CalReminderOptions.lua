@@ -30,6 +30,7 @@ CalReminder_allianceNpcValues = {
 	"AZURATHEL"            ,
 	"DINAIRE"              ,
 	"VEREESA"              ,
+	"ABIGAIL"           ,
 }
 
 CalReminder_hordeNpcValues = {
@@ -54,6 +55,7 @@ CalReminder_hordeNpcValues = {
 	"CINDRETHRESH"      ,
 	"DINAIRE"           ,
 	"VEREESA"           ,
+	"ABIGAIL"           ,
 }
 
 
