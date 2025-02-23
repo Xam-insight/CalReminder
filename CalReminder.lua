@@ -691,7 +691,7 @@ function CalReminder:ReloadData()
 						EZBlizzUiPop_PlaySound(12867)
 					end
 				end
-				frame = EZBlizzUiPop_npcDialog(chief, string.format(message, UnitName("player"), L["SPACE_BEFORE_DOT"], firstEvent.title), "CalReminderFrameTemplate")
+				frame = EZBlizzUiPop_npcDialog(chief, string.format(message, UnitName("player"), firstEvent.title), "CalReminderFrameTemplate")
 			end
 			if not frame then
 				local isGuildEvent = GetGuildInfo("player") ~= nil and firstEvent.calendarType == "GUILD_EVENT"
