@@ -577,9 +577,10 @@ function CalReminder_browseEvents()
 					if event.calendarType == "PLAYER" or event.calendarType == "GUILD_EVENT" then
 						if monthOffsetLoopId == 0
 							and dayLoopId == curDay
-								and curHour >= event.startTime.hour
-									and curMinute >= event.startTime.minute then 
-							--too late
+								and (curHour > event.startTime.hour
+									or (curHour == event.startTime.hour
+										and curMinute >= event.startTime.minute)) then 
+							--CalReminder:Print("too late")
 						else
 							if not firstPendingEvent 
 									and (event.inviteStatus == Enum.CalendarStatus.Invited
