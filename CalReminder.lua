@@ -557,44 +557,90 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 end
 
 function CalReminder_browseEvents()
+	-- Retrieve current in-game time
 	local curHour, curMinute = GetGameTime()
+
+	-- Retrieve real calendar date (day, month, year)
 	local curDay, curMonth, curYear = CalReminder_getCurrentDate()
+
+	-- Retrieve the currently displayed month in Blizzard's calendar
 	local calDate = C_Calendar.GetMonthInfo()
+	if not calDate then
+		-- Safety guard: should not happen, but prevents nil crashes
+		return
+	end
+
 	local calMonth, calYear = calDate.month, calDate.year
+
+	-- Compute how many months we need to shift to align calendar display with the real date
 	local monthOffset = 12 * (curYear - calYear) + curMonth - calMonth
-		
+
+	-- Save the event the player was viewing, if any
 	local actualEventInfo = C_Calendar.GetEventIndex()
+
+	-- Move calendar to the correct month offset
 	C_Calendar.SetMonth(monthOffset)
-	
+
+	-- Loop control variables (kept as in original logic)
 	local monthOffsetLoopId = 0
 	local dayLoopId = curDay
 	local loopId = 1
 	local dayOffsetLoopId = 0
+
+	-- Reset global flags used by the reminder system
 	firstPendingEvent = false
+	firstEvent = nil
+	firstEventMonthOffset = nil
+	firstEventDay = nil
+	firstEventId = nil
+	firstEventIsTomorrow = false
+	firstEventIsToday = false
+
+	-- Main scanning loop: search day-by-day for a pending event
 	while not firstPendingEvent and dayOffsetLoopId <= CalReminderOptionsData.delay do
+		
+		-- Scan the days of the current month
 		while not firstPendingEvent and dayLoopId <= 31 and dayOffsetLoopId <= CalReminderOptionsData.delay do
-			local numEvents = C_Calendar.GetNumDayEvents(0, dayLoopId)
+			
+			-- Retrieve number of events for this day
+			local numEvents = C_Calendar.GetNumDayEvents(0, dayLoopId) or 0
+
+			-- Iterate through each event
 			while not firstPendingEvent and loopId <= numEvents do
 				local event = C_Calendar.GetDayEvent(0, dayLoopId, loopId)
+
 				if event then
+					-- Disable CALENDAR_ACTION_PENDING temporarily to avoid UI flicker or recursion
 					CalReminder:UnregisterEvent("CALENDAR_ACTION_PENDING")
+
+					-- Filter only PLAYER or GUILD events
 					if event.calendarType == "PLAYER" or event.calendarType == "GUILD_EVENT" then
+						
+						-- Skip events that already started today
 						if monthOffsetLoopId == 0
 							and dayLoopId == curDay
 								and (curHour > event.startTime.hour
 									or (curHour == event.startTime.hour
-										and curMinute >= event.startTime.minute)) then 
+										and curMinute >= event.startTime.minute)) then
+							
+							-- Already too late for this event today
 							--CalReminder:Print("too late")
+						
 						else
-							if not firstPendingEvent 
-									and (event.inviteStatus == Enum.CalendarStatus.Invited
-										or event.inviteStatus == Enum.CalendarStatus.Tentative) then
+							-- Check if player is invited or tentative
+							if event.inviteStatus == Enum.CalendarStatus.Invited
+								or event.inviteStatus == Enum.CalendarStatus.Tentative then
+								
 								local eventFound = true
+
+								-- If Tentative, apply reminder logic based on stored "reason"
 								if event.inviteStatus == Enum.CalendarStatus.Tentative then
 									local eventInfo = C_Calendar.GetDayEvent(monthOffsetLoopId, dayLoopId, loopId)
-									local reasonID = eventInfo.eventID and getCalReminderData(eventInfo.eventID, "reason", UnitGUID("player"))
-									local reminder = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reminder
-									if reasonID and reasonsDropdownOptions[reasonID] then
+									if eventInfo then
+										local reasonID = eventInfo.eventID and getCalReminderData(eventInfo.eventID, "reason", UnitGUID("player"))
+										local reminder = reasonID and reasonsDropdownOptions[reasonID] and reasonsDropdownOptions[reasonID].reminder
+
+										-- If a reminder delay is specified, suppress the event until the appropriate number of days
 										if reminder then
 											if dayLoopId - reminder > curDay then
 												eventFound = false
@@ -604,14 +650,17 @@ function CalReminder_browseEvents()
 										end
 									end
 								end
+
 								if eventFound then
-									--need response
+									-- Mark this as the first pending event
 									firstEvent = event
+
 									if dayLoopId == curDay then
 										firstEventIsToday = true
 									elseif dayLoopId == curDay + 1 then
 										firstEventIsTomorrow = true
 									end
+
 									firstEventMonthOffset = monthOffsetLoopId
 									firstEventDay = dayLoopId
 									firstEventId = loopId
@@ -621,18 +670,25 @@ function CalReminder_browseEvents()
 						end
 					end
 				end
+
 				loopId = loopId + 1
 			end
+
 			dayLoopId = dayLoopId + 1
 			dayOffsetLoopId = dayOffsetLoopId + 1
 			loopId = 1
 		end
+
+		-- Move calendar forward one month and continue scanning
 		C_Calendar.SetMonth(1)
 		monthOffsetLoopId = monthOffsetLoopId + 1
 		dayLoopId = 1
 	end
-	
+
+	-- Restore the calendar month view to its original offset
 	C_Calendar.SetMonth(- monthOffset - monthOffsetLoopId)
+
+	-- Restore previously opened event or close event view
 	if actualEventInfo then
 		C_Calendar.OpenEvent(0, actualEventInfo.monthDay, actualEventInfo.eventIndex)
 	else
