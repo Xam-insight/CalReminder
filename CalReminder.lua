@@ -62,6 +62,14 @@ function CalReminder:OnEnable()
 	
     --self:RegisterEvent("CALENDAR_ACTION_PENDING", "ReloadData")
 
+	-- Preload NPC names
+	for _, entry in ipairs(CalReminder_allianceNpcValues) do
+		EZBlizzUiPop_GetNameFromNpcID(entry)
+    end
+	for _, entry in ipairs(CalReminder_hordeNpcValues) do
+        EZBlizzUiPop_GetNameFromNpcID(entry)
+    end
+
 	self:RegisterChatCommand("crm", "CalReminderChatCommand")
 	self:Print(L["CALREMINDER_WELCOME"])
 end
@@ -748,8 +756,8 @@ function CalReminder:ReloadData()
 			if firstEventIsToday or firstEventIsTomorrow then
 				local message = (firstEventIsToday and L["CALREMINDER_DDAY_REMINDER"]) or L["CALREMINDER_LDAY_REMINDER"]
 				if not CalReminderOptionsData["SoundsDisabled"] then
-					if CalReminderOptionsData["QuotesDisabled"] or not EZBlizzUiPop_PlayNPCRandomSound(chief, "Dialog", true) then
-						EZBlizzUiPop_PlaySound(12867)
+					if not EZBlizzUiPop_PlayNPCRandomSound(chief, "Dialog", not CalReminderOptionsData["QuotesDisabled"]) then
+						EZBlizzUiPop_PlaySound(12867) -- AlarmClockWarning2
 					end
 				end
 				frame = EZBlizzUiPop_npcDialog(chief, string.format(message, UnitName("player"), firstEvent.title), "CalReminderFrameTemplate")
