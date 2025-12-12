@@ -33,6 +33,8 @@ CalReminder_allianceNpcValues = {
 	224220, -- ABIGAIL
 	235448, -- XAL'ATATH
 	241743, -- Archmage Khadgar
+	215113, -- Orweyna
+	207471, -- Widow Arak'nai
 }
 
 CalReminder_hordeNpcValues = {
@@ -62,6 +64,8 @@ CalReminder_hordeNpcValues = {
 	235448, -- XAL'ATATH
 	241743, -- Archmage Khadgar
 	230062, -- ALLERIA
+	215113, -- Orweyna
+	207471, -- Widow Arak'nai
 }
 
 

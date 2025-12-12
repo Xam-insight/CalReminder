@@ -1,4 +1,7 @@
-﻿- v1.3.8
+﻿- v1.3.9
+	- TOC for 12.0.0.
+	- Added: NPCs.
+- v1.3.8
 	- TOC for 11.2.7.
 - v1.3.7
 	- TOC for 11.2.5.
