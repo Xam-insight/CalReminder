@@ -1,6 +1,8 @@
 CalReminder = LibStub("AceAddon-3.0"):NewAddon("CalReminder", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceSerializer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("CalReminder", true)
 local ACD = LibStub("AceConfigDialog-3.0")
+local XITK = LibStub("XamInsightToolKit")
+local EZBUP = LibStub("EZBlizzardUiPopups")
 
 CalReminderGlobal_CommPrefix = "CalReminder"
 
@@ -64,10 +66,10 @@ function CalReminder:OnEnable()
 
 	-- Preload NPC names
 	for _, entry in ipairs(CalReminder_allianceNpcValues) do
-		EZBlizzUiPop_GetNameFromNpcID(entry)
+		XITK.GetNameFromNpcID(entry)
     end
 	for _, entry in ipairs(CalReminder_hordeNpcValues) do
-        EZBlizzUiPop_GetNameFromNpcID(entry)
+        XITK.GetNameFromNpcID(entry)
     end
 
 	self:RegisterChatCommand("crm", "CalReminderChatCommand")
@@ -149,7 +151,7 @@ function setCalReminderData(eventID, data, aValue, player)
 		CalReminderData.events[eventID].players[player] = {}
 	end
 	if not dataTime or dataTime == "" then
-		dataTime = tostring(CalReminder_getTimeUTCinMS())
+		dataTime = tostring(XITK.getTimeUTCinMS())
 	end
 	if player then
 		CalReminderData.events[eventID].players[player][data] = value.."|"..dataTime
@@ -281,8 +283,8 @@ StaticPopupDialogs["CALREMINDER_CALLTOARMS_DIALOG"] = {
 			
 			-- Send message to Invitees
 			for _, inviteInfo in ipairs(data.list) do
-				local fullName = CalReminder_addRealm(inviteInfo.name)
-				if not CalReminder_isPlayerCharacter(fullName) then
+				local fullName = XITK.addRealm(inviteInfo.name)
+				if not XITK.isPlayerCharacter(fullName) then
 					SendChatMessage(messageText, "WHISPER", nil, fullName)
 				end
 			end
@@ -569,7 +571,7 @@ function CalReminder_browseEvents()
 	local curHour, curMinute = GetGameTime()
 
 	-- Retrieve real calendar date (day, month, year)
-	local curDay, curMonth, curYear = CalReminder_getCurrentDate()
+	local curDay, curMonth, curYear = XITK.getCurrentDate()
 
 	-- Retrieve the currently displayed month in Blizzard's calendar
 	local calDate = C_Calendar.GetMonthInfo()
@@ -714,7 +716,7 @@ function CalReminder:ReloadData()
 		if calendarIsShown then
 			currentEventInfo = C_Calendar.GetEventIndex()
 			if currentEventInfo then
-				local _, curMonth, curYear = CalReminder_getCurrentDate()
+				local _, curMonth, curYear = XITK.getCurrentDate()
 				local calDate = C_Calendar.GetMonthInfo()
 				local calMonth, calYear = calDate.month, calDate.year
 				local monthOffset = 12 * (curYear - calYear) + curMonth - calMonth
@@ -756,15 +758,15 @@ function CalReminder:ReloadData()
 			if firstEventIsToday or firstEventIsTomorrow then
 				local message = (firstEventIsToday and L["CALREMINDER_DDAY_REMINDER"]) or L["CALREMINDER_LDAY_REMINDER"]
 				if not CalReminderOptionsData["SoundsDisabled"] then
-					if not EZBlizzUiPop_PlayNPCRandomSound(chief, "Dialog", not CalReminderOptionsData["QuotesDisabled"]) then
-						EZBlizzUiPop_PlaySound(12867) -- AlarmClockWarning2
+					if not EZBUP.PlayNPCRandomSound(chief, "Dialog", not CalReminderOptionsData["QuotesDisabled"]) then
+						XITK.PlaySound(12867) -- AlarmClockWarning2
 					end
 				end
-				frame = EZBlizzUiPop_npcDialog(chief, string.format(message, UnitName("player"), firstEvent.title), "CalReminderFrameTemplate")
+				frame = EZBUP.npcDialog(chief, string.format(message, UnitName("player"), firstEvent.title), "CalReminderFrameTemplate")
 			end
 			if not frame then
 				local isGuildEvent = GetGuildInfo("player") ~= nil and firstEvent.calendarType == "GUILD_EVENT"
-				EZBlizzUiPop_ToastFakeAchievement(CalReminder, not CalReminderOptionsData["SoundsDisabled"], 4, nil, firstEvent.title, nil, 237538, isGuildEvent, L["CALREMINDER_ACHIV_REMINDER"], true, function()  CalReminderShowCalendar(firstEventMonthOffset, firstEventDay, firstEventId)  end)
+				EZBUP.ToastFakeAchievement(CalReminder, not CalReminderOptionsData["SoundsDisabled"], 4, nil, firstEvent.title, nil, 237538, isGuildEvent, L["CALREMINDER_ACHIV_REMINDER"], true, function()  CalReminderShowCalendar(firstEventMonthOffset, firstEventDay, firstEventId)  end)
 			end
 		end
 	end

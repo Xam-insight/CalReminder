@@ -1,4 +1,5 @@
 local L = LibStub("AceLocale-3.0"):GetLocale("CalReminder", true);
+local XITK = LibStub("XamInsightToolKit")
 
 -- Number of seconds in a day (86400 seconds = 1 day)
 local secondsInDay = 86400
@@ -50,17 +51,17 @@ local function CalReminder_filterCalReminderData()
 					dataToSend.events[event][player] = {}
 					dataToSend.events[event][player].reason     = eventData.players[player].reason
 					dataToSend.events[event][player].reasonText = eventData.players[player].reasonText
-					if CalReminder_countTableElements(dataToSend.events[event][player]) == 0 then
+					if XITK.countTableElements(dataToSend.events[event][player]) == 0 then
 						dataToSend.events[event][player] = nil
 					end
 				end
 			end
-			if CalReminder_countTableElements(dataToSend.events[event]) == 0 then
+			if XITK.countTableElements(dataToSend.events[event]) == 0 then
 				dataToSend.events[event] = nil
 			end
 		end
 	end
-	if CalReminder_countTableElements(dataToSend.events) == 0 then
+	if XITK.countTableElements(dataToSend.events) == 0 then
 		dataToSend = nil
 	end
 	return dataToSend
@@ -94,7 +95,7 @@ function CalReminder_shareDataWithInvitees(onlyCall)
 		if eventDay and eventMonth and eventYear then
 
 			-- Convert event date into a comparable timestamp
-			local eventTimestamp = CalReminder_dateToTimestamp(eventDay, eventMonth, eventYear)
+			local eventTimestamp = XITK.dateToTimestamp(eventDay, eventMonth, eventYear)
 
 			-- Determine how far in the past or future the event is
 			if (currentTime - eventTimestamp) > (daysThreshold * secondsInDay) then
@@ -132,10 +133,10 @@ function CalReminder_shareDataWithInvitees(onlyCall)
 		if name then
 			
 			-- Convert to full player name ("Name-Realm")
-			local target = CalReminder_addRealm(name, server)
+			local target = XITK.addRealm(name, server)
 
 			-- Do not send anything to the player themselves
-			if not CalReminder_isPlayerCharacter(target) then
+			if not XITK.isPlayerCharacter(target) then
 
 				-- If onlyCall = true, request data instead of sending data
 				if onlyCall then
@@ -160,10 +161,10 @@ end
 function CalReminder:ReceiveData(prefix, message, distribution, sender)
 
 	-- Ignore messages not using our prefix, and ignore our own sent messages.
-	if prefix == CalReminderGlobal_CommPrefix and not CalReminder_isPlayerCharacter(sender) then
+	if prefix == CalReminderGlobal_CommPrefix and not XITK.isPlayerCharacter(sender) then
 
 		-- Normalize sender name into "Name-Realm"
-		local senderFullName = CalReminder_addRealm(sender)
+		local senderFullName = XITK.addRealm(sender)
 
 		-- Messages are formatted as: "<MessageType>#<SerializedPayload>"
 		local messageType, rawPayload = strsplit("#", message, 2)
@@ -260,7 +261,7 @@ function CalReminder:ReceiveData(prefix, message, distribution, sender)
 					--   → send corrections ("DATA_FIX") back to them
 					-- ----------------------------------------------------------------------
 					if messageType == MESSAGE_TYPE_FULL_DATA
-						and CalReminder_countTableElements(fixedObsoleteSentValues.events) > 0 then
+						and XITK.countTableElements(fixedObsoleteSentValues.events) > 0 then
 
 						encodeAndSendData(
 							fixedObsoleteSentValues,

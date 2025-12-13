@@ -1,4 +1,4 @@
-﻿package-as: CalReminder
+package-as: CalReminder
 
 externals:
 	Libs/Ace3/AceAddon-3.0: https://repos.wowace.com/wow/ace3/trunk/AceAddon-3.0
@@ -12,9 +12,11 @@ externals:
 	Libs/Ace3/CallbackHandler-1.0: https://repos.wowace.com/wow/ace3/trunk/CallbackHandler-1.0
 	Libs/Ace3/LibStub: https://repos.wowace.com/wow/ace3/trunk/LibStub
 	Libs/LibDataBroker-1.1: https://repos.wowace.com/wow/libdatabroker-1-1
+	Libs/XamInsightToolKit: https://github.com/Xam-insight/XamInsightToolKit
 	Libs/EZBlizzardUiPopups: https://github.com/Xam-insight/EZBlizzardUiPopups
 
 ignore:
+	- Libs/XamInsightToolKit/XamInsightToolKit.toc
 	- Libs/EZBlizzardUiPopups/EZBlizzardUiPopups.toc
 	- Libs/EZBlizzardUiPopups/CHANGELOG.txt
 	- Libs/EZBlizzardUiPopups/wow_lua_to_csv.py
