@@ -17,10 +17,4 @@
 ## Category-zhTW: 地城與團隊
 ## SavedVariables: CalReminderOptionsData, CalReminderData
 
-Libs\Ace3\LibStub\LibStub.lua
-Libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
-Libs\XamInsightToolKit\XamInsightToolKit.lua
-Libs\EZBlizzardUiPopups\EZBlizzardUiPopups_db.lua
-Libs\EZBlizzardUiPopups\EZBlizzardUiPopups.lua
-
 embeds.xml

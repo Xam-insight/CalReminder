@@ -17,6 +17,7 @@ externals:
 
 ignore:
 	- Libs/XamInsightToolKit/XamInsightToolKit.toc
+	- Libs/XamInsightToolKit/CHANGELOG.txt
 	- Libs/EZBlizzardUiPopups/EZBlizzardUiPopups.toc
 	- Libs/EZBlizzardUiPopups/CHANGELOG.txt
 	- Libs/EZBlizzardUiPopups/wow_lua_to_csv.py
