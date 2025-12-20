@@ -532,7 +532,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 			if ownerRegion and ownerRegion.eventIndex and rootDescription then
 				local currentEventInfo = C_Calendar.ContextMenuGetEventIndex()
 				local eventInfo = currentEventInfo and C_Calendar.GetDayEvent(currentEventInfo.offsetMonths, currentEventInfo.monthDay, currentEventInfo.eventIndex)
-				if eventInfo and eventInfo.calendarType == "PLAYER" or eventInfo.calendarType == "GUILD_EVENT" then
+				if eventInfo and (eventInfo.calendarType == "PLAYER" or eventInfo.calendarType == "GUILD_EVENT") then
 					local inviteInfo = {}
 					inviteInfo.eventID = eventInfo.eventID
 					inviteInfo.guid = UnitGUID("player")
