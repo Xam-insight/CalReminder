@@ -39,7 +39,7 @@ function CalReminder:OnInitialize()
 		CalReminderData.events = {}
 	end
 	
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", self.ChatFilter)
+	ChatFrameUtil.AddMessageEventFilter("CHAT_MSG_SYSTEM", self.ChatFilter)
 end
 
 local playerNotFoundMsg = string.gsub(ERR_CHAT_PLAYER_NOT_FOUND_S, "%%s", "(.-)")
