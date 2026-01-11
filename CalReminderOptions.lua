@@ -4,10 +4,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale("CalReminder", true)
 local XITK = LibStub("XamInsightToolKit")
 local EZBUP = LibStub("EZBlizzardUiPopups")
 
-if not CalReminderOptionsData then
-	CalReminderOptionsData = {}
-end
-
 CalReminder_allianceNpcValues = {
 	230055, -- ANDUIN
 	49587,  -- ALLIANCE_GUILD_HERALD

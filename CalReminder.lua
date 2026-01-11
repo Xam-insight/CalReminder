@@ -19,6 +19,16 @@ function CalReminder:OnInitialize()
 	-- Called when the addon is loaded
 	self:RegisterComm(CalReminderGlobal_CommPrefix, "ReceiveData")
 	
+	if not CalReminderOptionsData then
+		CalReminderOptionsData = {}
+	end
+	if not CalReminderOptionsData.soundHandler then
+		CalReminderOptionsData.soundHandler = {}
+	end
+	if CalReminderOptionsData.soundHandler.soundHandle then
+		StopSound(CalReminderOptionsData.soundHandler.soundHandle)
+		CalReminderOptionsData.soundHandler.soundHandle = nil
+	end
 	if not CalReminderOptionsData.delay then
 		CalReminderOptionsData.delay = 7
 	end
@@ -777,6 +787,20 @@ function CalReminderShowCalendar(monthOffset, day, id)
 		UIParentLoadAddOn("Blizzard_Calendar")
 	end
 	if ( Calendar_Toggle ) then
+		if CalReminderOptionsData.soundHandler.soundHandle then
+			StopSound(CalReminderOptionsData.soundHandler.soundHandle)
+			CalReminderOptionsData.soundHandler.soundHandle = nil
+		end
+		if not CalReminderOptionsData["SoundsDisabled"] then
+			local willPlay, soundHandle = PlaySound(48826) -- Ticking sound
+			CalReminderOptionsData.soundHandler.soundHandle = soundHandle
+			C_Timer.After(2, function()
+				StopSound(soundHandle)
+				if CalReminderOptionsData.soundHandler.soundHandle and CalReminderOptionsData.soundHandler.soundHandle == soundHandle then
+					CalReminderOptionsData.soundHandler.soundHandle = nil
+				end
+			end)
+		end
 		Calendar_Toggle()
 		ShowUIPanel(CalendarFrame)
 	end
