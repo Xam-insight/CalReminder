@@ -63,6 +63,12 @@ function CalReminder:ChatFilter(event, msg, author, ...)
 	return false, msg, author, ...
 end
 
+local function CalReminderFinishLoad()
+	loadCalReminderOptions()
+	HearthstoneLoot:RegisterChatCommand("crm", "CalReminderChatCommand")
+	HearthstoneLoot:Print(L["CALREMINDER_WELCOME"])
+end
+
 function CalReminder:OnEnable()
 	-- Called when the addon is enabled
 	C_Calendar.OpenCalendar()
@@ -82,8 +88,17 @@ function CalReminder:OnEnable()
         XITK.GetNameFromNpcID(entry)
     end
 
-	self:RegisterChatCommand("crm", "CalReminderChatCommand")
-	self:Print(L["CALREMINDER_WELCOME"])
+	local witnessItemId = 118427
+	local witnessItem = select(2, GetItemInfo(witnessItemId))
+	if witnessItem then
+		CalReminderFinishLoad()
+	else
+		self:RegisterEvent("GET_ITEM_INFO_RECEIVED", function()
+			self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
+			CalReminderFinishLoad()
+		end)
+		C_Item.RequestLoadItemDataByID(witnessItemId)
+	end
 end
 
 function CalReminder:CalReminderChatCommand()
@@ -91,9 +106,6 @@ function CalReminder:CalReminderChatCommand()
 end
 
 function CalReminder_OpenOptions()
-	if not CalReminderOptionsLoaded then
-		loadCalReminderOptions()
-	end
 	ACD:Open("CalReminder")
 end
 
