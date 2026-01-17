@@ -1,4 +1,4 @@
-- v1.4.2
+- v1.4.3
 	- Code optimization.
 - v1.4.1
 	- ChatFrame_AddMessageEventFilter deprecated.

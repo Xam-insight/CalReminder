@@ -65,8 +65,8 @@ end
 
 local function CalReminderFinishLoad()
 	loadCalReminderOptions()
-	HearthstoneLoot:RegisterChatCommand("crm", "CalReminderChatCommand")
-	HearthstoneLoot:Print(L["CALREMINDER_WELCOME"])
+	CalReminder:RegisterChatCommand("crm", "CalReminderChatCommand")
+	CalReminder:Print(L["CALREMINDER_WELCOME"])
 end
 
 function CalReminder:OnEnable()
