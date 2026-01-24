@@ -19,6 +19,16 @@ function CalReminder:OnInitialize()
 	-- Called when the addon is loaded
 	self:RegisterComm(CalReminderGlobal_CommPrefix, "ReceiveData")
 	
+	if not CalReminderOptionsData then
+		CalReminderOptionsData = {}
+	end
+	if not CalReminderOptionsData.soundHandler then
+		CalReminderOptionsData.soundHandler = {}
+	end
+	if CalReminderOptionsData.soundHandler.soundHandle then
+		StopSound(CalReminderOptionsData.soundHandler.soundHandle)
+		CalReminderOptionsData.soundHandler.soundHandle = nil
+	end
 	if not CalReminderOptionsData.delay then
 		CalReminderOptionsData.delay = 7
 	end
@@ -39,7 +49,7 @@ function CalReminder:OnInitialize()
 		CalReminderData.events = {}
 	end
 	
-	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", self.ChatFilter)
+	ChatFrameUtil.AddMessageEventFilter("CHAT_MSG_SYSTEM", self.ChatFilter)
 end
 
 local playerNotFoundMsg = string.gsub(ERR_CHAT_PLAYER_NOT_FOUND_S, "%%s", "(.-)")
@@ -51,6 +61,12 @@ function CalReminder:ChatFilter(event, msg, author, ...)
 		end
 	end
 	return false, msg, author, ...
+end
+
+local function CalReminderFinishLoad()
+	loadCalReminderOptions()
+	CalReminder:RegisterChatCommand("crm", "CalReminderChatCommand")
+	CalReminder:Print(L["CALREMINDER_WELCOME"])
 end
 
 function CalReminder:OnEnable()
@@ -72,8 +88,17 @@ function CalReminder:OnEnable()
         XITK.GetNameFromNpcID(entry)
     end
 
-	self:RegisterChatCommand("crm", "CalReminderChatCommand")
-	self:Print(L["CALREMINDER_WELCOME"])
+	local witnessItemId = 118427
+	local witnessItem = select(2, GetItemInfo(witnessItemId))
+	if witnessItem then
+		CalReminderFinishLoad()
+	else
+		self:RegisterEvent("GET_ITEM_INFO_RECEIVED", function()
+			self:UnregisterEvent("GET_ITEM_INFO_RECEIVED")
+			CalReminderFinishLoad()
+		end)
+		C_Item.RequestLoadItemDataByID(witnessItemId)
+	end
 end
 
 function CalReminder:CalReminderChatCommand()
@@ -81,9 +106,6 @@ function CalReminder:CalReminderChatCommand()
 end
 
 function CalReminder_OpenOptions()
-	if not CalReminderOptionsLoaded then
-		loadCalReminderOptions()
-	end
 	ACD:Open("CalReminder")
 end
 
@@ -777,6 +799,20 @@ function CalReminderShowCalendar(monthOffset, day, id)
 		UIParentLoadAddOn("Blizzard_Calendar")
 	end
 	if ( Calendar_Toggle ) then
+		if CalReminderOptionsData.soundHandler.soundHandle then
+			StopSound(CalReminderOptionsData.soundHandler.soundHandle)
+			CalReminderOptionsData.soundHandler.soundHandle = nil
+		end
+		if not CalReminderOptionsData["SoundsDisabled"] then
+			local willPlay, soundHandle = PlaySound(48826) -- Ticking sound
+			CalReminderOptionsData.soundHandler.soundHandle = soundHandle
+			C_Timer.After(2, function()
+				StopSound(soundHandle)
+				if CalReminderOptionsData.soundHandler.soundHandle and CalReminderOptionsData.soundHandler.soundHandle == soundHandle then
+					CalReminderOptionsData.soundHandler.soundHandle = nil
+				end
+			end)
+		end
 		Calendar_Toggle()
 		ShowUIPanel(CalendarFrame)
 	end
