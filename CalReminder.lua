@@ -429,7 +429,7 @@ function CalReminder:SaveEventData()
 	if actualEventIndex then
 		local actualEventInfo = actualEventIndex and C_Calendar.GetDayEvent(actualEventIndex.offsetMonths, actualEventIndex.monthDay, actualEventIndex.eventIndex)
 		if actualEventInfo then
-			if actualEventInfo.calendarType == "PLAYER" or actualEventInfo.calendarType == "GUILD_EVENT" then
+			if not issecretvalue(actualEventInfo.calendarType) and (actualEventInfo.calendarType == "PLAYER" or actualEventInfo.calendarType == "GUILD_EVENT") then
 				setCalReminderData(actualEventInfo.eventID, "month", actualEventInfo.startTime and actualEventInfo.startTime.month)
 				setCalReminderData(actualEventInfo.eventID, "day",   actualEventInfo.startTime and actualEventInfo.startTime.monthDay)
 				setCalReminderData(actualEventInfo.eventID, "year",  actualEventInfo.startTime and actualEventInfo.startTime.year)
@@ -461,7 +461,7 @@ function CalReminder:CreateCalReminderButtons(event, addOnName)
 		hooksecurefunc("CalendarEventInviteListButton_OnEnter", function(self)
 			if ( self.inviteIndex ) then
 				local inviteInfo = C_Calendar.EventGetInvite(self.inviteIndex)
-				if inviteInfo and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
+				if inviteInfo and not issecretvalue(inviteInfo.inviteStatus) and inviteInfo.inviteStatus == Enum.CalendarStatus.Tentative then
 					local currentEventId = CalReminder_getCurrentEventId()
 					local reason = getCalReminderData(currentEventId, "reason", inviteInfo.guid)
 					reason = (reason and reasonsDropdownOptions[reason] and reasonsDropdownOptions[reason].reasonLabel) or nil

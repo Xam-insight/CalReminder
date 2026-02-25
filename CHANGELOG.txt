@@ -1,3 +1,5 @@
+- v1.4.7
+	- Secret values management.
 - v1.4.6
 	- Added: Magister Umbric, Lyssabel Dawnpetal, Grand Magister Rommath and Tocho Cloudhide.
 - v1.4.5
