@@ -773,6 +773,9 @@ function CalReminder:ReloadData()
 				chief = CalReminderOptionsData["ALLIANCE_NPC"] or "RANDOM"
 				chiefList = CalReminder_allianceNpcValues
 			end
+			if not chiefList[chief] then
+				chief = "RANDOM"
+			end 
 			if chief == "RANDOM" then
 				chief = chiefList[math.random(1, #chiefList)]
 			end

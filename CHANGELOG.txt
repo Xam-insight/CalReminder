@@ -1,3 +1,5 @@
+- v1.4.8
+	- Added: NPCs.
 - v1.4.7
 	- Secret values management.
 - v1.4.6

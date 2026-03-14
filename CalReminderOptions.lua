@@ -32,9 +32,13 @@ CalReminder_allianceNpcValues = {
 	235448, -- XAL'ATATH
 	241743, -- Archmage Khadgar
 	215113, -- Orweyna
-	207471, -- Widow Arak'nai
+	225585, -- Widow Arak'nai
 	255283, -- Magister Umbric
 	256078, -- Lyssabel Dawnpetal
+	253366, -- Arator
+	249488, -- Dundun
+	243708, -- Decimus
+	259222, -- Zul'jarra
 }
 
 CalReminder_hordeNpcValues = {
@@ -65,9 +69,13 @@ CalReminder_hordeNpcValues = {
 	241743, -- Archmage Khadgar
 	230062, -- ALLERIA
 	215113, -- Orweyna
-	207471, -- Widow Arak'nai
+	225585, -- Widow Arak'nai
 	250395, -- Grand Magister Rommath
 	233062, -- Tocho Cloudhide
+	253366, -- Arator
+	249488, -- Dundun
+	243708, -- Decimus
+	259222, -- Zul'jarra
 }
 
 
