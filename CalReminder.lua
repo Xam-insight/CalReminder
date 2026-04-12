@@ -646,7 +646,7 @@ function CalReminder_browseEvents()
 					CalReminder:UnregisterEvent("CALENDAR_ACTION_PENDING")
 
 					-- Filter only PLAYER or GUILD events
-					if event.calendarType == "PLAYER" or event.calendarType == "GUILD_EVENT" then
+					if not issecretvalue(event.calendarType) and (event.calendarType == "PLAYER" or event.calendarType == "GUILD_EVENT") then
 						
 						-- Skip events that already started today
 						if monthOffsetLoopId == 0
