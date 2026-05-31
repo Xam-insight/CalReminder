@@ -1,3 +1,5 @@
+- v1.4.12
+	- Secret values management.
 - v1.4.11
 	- Secret values management.
 - v1.4.10
